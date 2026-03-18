@@ -13,17 +13,13 @@ Official implementation of **ZeroKey: Point-Level Reasoning and Zero-Shot 3D Key
 
 ## Overview
 
-We propose a novel **zero-shot approach** for keypoint detection on 3D shapes using Multi-Modal Large Language Models (MLLMs). Our method extracts and names salient keypoints on 3D models **without any ground truth labels or supervision**, achieving competitive performance with supervised methods on standard benchmarks.
+We propose a novel zero-shot approach for keypoint detection on 3D shapes. Point-level reasoning on visual data is challenging as it requires precise localization capability, posing problems even for powerful models like DINO or CLIP. Traditional methods for 3D keypoint detection rely heavily on annotated 3D datasets and extensive supervised training, limiting their scalability and applicability to new categories or domains. In contrast, our method utilizes the rich knowledge embedded within Multi-Modal Large Language Models (MLLMs). Specifically, we demonstrate, for the first time, that pixel-level annotations used to train recent MLLMs can be exploited for both extracting and naming salient keypoints on 3D models without any ground truth labels or supervision. Experimental evaluations demonstrate that our approach achieves competitive performance on standard benchmarks compared to supervised methods, despite not requiring any 3D keypoint annotations during training. Our results highlight the potential of integrating language models for localized 3D shape understanding.
 
-### Key Features
+<p align="center">
+  <img src="docs/teaser3.png" alt="Zero-shot 3D Keypoint Detection" width="100%">
+</p>
 
-- **Zero-shot 3D keypoint detection** - No 3D annotations required during training
-- **Semantic keypoint naming** - Automatically generates human-readable names for detected keypoints
-- **Multi-modal integration** - Leverages MLLMs (Molmo, GPT-4o) with vision models (DINOv2, CLIP, SAM)
-- **Multi-view feature backprojection** - Projects 2D features from multiple viewpoints onto 3D surfaces
-- **Quadratic assignment optimization** - Matches keypoint candidates using feature similarity and geodesic distance
-
-![Keypoint Detection using BT3D](https://wimmerth.github.io/b2-3d/static/images/qualitative_results_5.png)
+**Zero-shot 3D Keypoint Detection.** Without any ground truth labels or supervised training, our method leverages the point-level reasoning embedded within MLLMs to extract and name salient keypoints on 3D models. The figure illustrates how our approach achieves competitive performance compared to CLIP-DINOiser baselines, highlighting the potential of integrating language models with vision tasks for enhanced 3D shape understanding.
 
 ---
 
@@ -312,14 +308,13 @@ RenderO3D                          # Base rendering (PyTorch3D)
 If you find this work useful, please cite:
 
 ```bibtex
-@misc{gong2024zerokeypointlevelreasoningzeroshot,
-      title={ZeroKey: Point-Level Reasoning and Zero-Shot 3D Keypoint Detection from Large Language Models},
-      author={Bingchen Gong and Diego Gomez and Abdullah Hamdi and Abdelrahman Eldesokey and Ahmed Abdelreheem and Peter Wonka and Maks Ovsjanikov},
-      year={2024},
-      eprint={2412.06292},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2412.06292},
+@InProceedings{Gong_2025_ICCV,
+    author    = {Gong, Bingchen and Gomez, Diego and Hamdi, Abdullah and Eldesokey, Abdelrahman and Abdelreheem, Ahmed and Wonka, Peter and Ovsjanikov, Maks},
+    title     = {ZeroKey: Point-Level Reasoning and Zero-Shot 3D Keypoint Detection from Large Language Models},
+    booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+    month     = {October},
+    year      = {2025},
+    pages     = {22089-22099}
 }
 ```
 

@@ -1,0 +1,1 @@
+"""ZeroKey CLI commands"""

@@ -1,0 +1,20 @@
+services:
+  zerokey:
+    build: .
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ${KEYPOINTNET_DATASET_PATH:-./data/keypointnet}:/data/keypointnet
+      - ${COLMAP_DATA_PATH:-./data/colmap}:/data/colmap
+      - ${HUMAN3M_DATA_PATH:-./data/human3m}:/data/human3m
+      - ./results:/app/results
+    environment:
+      - KEYPOINTNET_DATASET_PATH=/data/keypointnet
+      - COLMAP_DATA_PATH=/data/colmap
+      - HUMAN3M_DATA_PATH=/data/human3m
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}

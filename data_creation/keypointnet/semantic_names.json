@@ -1,0 +1,65 @@
+[{
+    "class_id": "03001627",
+    "model_id": "8d458ab12073c371caa2c06fded3ca21",
+    "semantic_id_mapping": {
+        "0": "top corners of the back rest",
+        "1": "top corners of the back rest",
+        "2": "different corners of the seat",
+        "3": "different corners of the seat",
+        "4": "different corners of the seat",
+        "5": "different corners of the seat",
+        "6": "end of both armrests",
+        "7": "end of both armrests",
+        "8": "end of both armrests",
+        "9": "end of both armrests",
+        "10": "tip of all legs",
+        "11": "tip of all legs",
+        "12": "tip of all legs",
+        "13": "tip of all legs",
+        "14": "tip of all legs",
+        "15": "cylinder",
+        "16": "cylinder"
+    }
+},
+{
+    "class_id": "04379243",
+    "model_id": "1bce2f4937d36446a32c566d71fa585c",
+    "semantic_id_mapping": {
+        "0": "different corners",
+        "1": "different corners",
+        "2": "different corners",
+        "3": "different corners",
+        "4": "end of the legs",
+        "5": "end of the legs",
+        "6": "end of the legs",
+        "7": "end of the legs",
+        "8": "end of the stretcher between the table legs",
+        "9": "end of the stretcher between the table legs",
+        "10": "end of the stretcher between the table legs",
+        "11": "end of the stretcher between the table legs"
+    }
+},
+{
+    "class_id": "02691156",
+    "model_id": "723921d0060203a344d33ea02fa0f619",
+    "semantic_id_mapping": {
+        "0": "nose of the airplane",
+        "1": "top of the cockpit",
+        "2": "back end",
+        "3": "tip of all the wings",
+        "4": "different corners of the intersection between the body and the wings",
+        "5": "tip of all the wings",
+        "6": "different corners of the intersection between the body and the wings",
+        "7": "tip of all the wings",
+        "8": "tip of all the wings",
+        "10": "tip of all the wings",
+        "11": "tip of all the wings",
+        "12": "different corners of the intersection between the body and the wings",
+        "13": "different corners of the intersection between the body and the wings",
+        "14": "center of all turbines",
+        "15": "center of all turbines",
+        "16": "center of all turbines",
+        "17": "center of all turbines"
+    }
+}
+]

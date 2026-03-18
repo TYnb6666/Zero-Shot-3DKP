@@ -1,0 +1,35 @@
+{
+  "include": [
+    "."
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/.pixi/**",
+    "**/.cache/**",
+    "**/.git/**",
+    "**/.idea/**",
+    "**/*.egg-info/**",
+    "**/build/**",
+    "**/wandb/**",
+    "**/log*/**",
+    "**/outputs/**",
+    "**/results/**",
+    "**/checkpoints/**",
+    "**/runs/**",
+    "**/numbers/**",
+    "data_creation/**",
+    "molmo/**",
+    "unsupervised_keypoints/**",
+    "ULIP/**",
+    "clip_dinoiser/**"
+  ],
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Linux",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": "none",
+  "reportUnusedImport": "warning",
+  "reportUnusedVariable": "warning",
+  "reportOptionalMemberAccess": "warning",
+  "useLibraryCodeForTypes": true
+}

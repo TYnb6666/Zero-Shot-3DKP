@@ -43,6 +43,40 @@ pixi install
 pixi run zerokey --help
 ```
 
+### Using Docker
+
+A pre-built image is available on [Docker Hub](https://hub.docker.com/r/wenrij/zerokey):
+
+```bash
+# Pull pre-built image
+docker pull wenrij/zerokey:latest
+
+# Or build from source
+docker compose build
+```
+
+Run with Docker Compose (pre-configures all volume mounts and environment variables from `zerokey/_defaults.py`):
+
+```bash
+# Set host dataset paths (or edit docker-compose.yml directly)
+export KEYPOINT_DATASET_PATH=/path/to/keypointnet
+
+# Run any zerokey command
+docker compose run --rm zerokey zerokey eval --dataset keypointnet
+docker compose run --rm zerokey zerokey baseline patchalign3d --mode zerokey
+```
+
+Or run directly with `docker run`:
+
+```bash
+docker run --gpus all \
+  -v /path/to/keypointnet:/data/keypointnet \
+  -e KEYPOINT_DATASET_PATH=/data/keypointnet \
+  -v ./results:/data/results \
+  -e ZEROKEY_LOG_DIR=/data/results \
+  wenrij/zerokey:latest zerokey eval --dataset keypointnet
+```
+
 ### Type Checking
 
 The entire codebase passes [pyright](https://github.com/microsoft/pyright) with zero errors under `basic` type checking mode:
@@ -85,7 +119,7 @@ All configurable paths are centralized in `zerokey/_defaults.py` and read from e
 
 1. **KeypointNet** (Primary Benchmark)
    - Download: [KeypointNet Repository](https://github.com/qq456cvb/KeypointNet)
-   - Set `KEYPOINT_DATASET_PATH` in your environment or `.env`
+   - Set `KEYPOINT_DATASET_PATH` in your environment or `pyproject.toml`
 
 2. **Human3M** (Optional - for human body evaluation)
    - Set `HUMAN3M_DATA_PATH`

@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1
-FROM nvidia/cuda:12.9.0-devel-ubuntu24.04 AS base
+FROM nvidia/cuda:13.0.0-cudnn-devel-ubuntu24.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
 
 # System dependencies for OpenGL rendering (pyrender/open3d/vtk)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y build-essential \
     curl ca-certificates git \
     libegl1 libgl1 libglib2.0-0 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
@@ -17,13 +17,14 @@ ENV PATH="/root/.pixi/bin:${PATH}"
 
 WORKDIR /app
 
-# ── Stage 1: resolve & install deps (cached unless lock/toml change) ──
-COPY pyproject.toml pixi.lock ./
-RUN pixi install --locked
-
-# ── Stage 2: copy source & install CUDA extensions ──
+# Copy full source (pixi needs the local package for resolution)
 COPY . .
-RUN pixi install --locked && pixi run post-install
+
+# Tell pixi/conda that CUDA 13.0 is available (driver not visible at build time)
+ENV CONDA_OVERRIDE_CUDA="13.0"
+
+# Install all dependencies (conda + PyPI + CUDA extensions)
+RUN pixi install --all
 
 # Use EGL for headless GPU rendering (pyrender/open3d)
 ENV PYOPENGL_PLATFORM=egl

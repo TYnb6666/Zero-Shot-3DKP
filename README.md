@@ -58,11 +58,14 @@ Configuration is in `pyrightconfig.json` (Python 3.13, `typeCheckingMode: "basic
 
 ## Configuration
 
-All configurable paths are centralized in `zerokey/_defaults.py` and read from environment variables with sensible defaults. Copy `.env` from the template and edit as needed:
+All configurable paths are centralized in `zerokey/_defaults.py` and read from environment variables with sensible defaults. You can configure them in two ways:
 
-```bash
-cp .env.example .env   # if .env.example exists, otherwise create manually
-```
+1. **Edit `zerokey/_defaults.py` directly** — change the fallback values in `os.environ.get()` calls
+2. **Set environment variables in `pyproject.toml`** — add entries under `[tool.pixi.activation.env]` so they are automatically set when the pixi environment is activated:
+   ```toml
+   [tool.pixi.activation.env]
+   KEYPOINT_DATASET_PATH = "/path/to/KeypointNet/dataset"
+   ```
 
 | Variable | Default | Description |
 |---|---|---|
@@ -124,15 +127,20 @@ zerokey eval --dataset realscene
 ### Baselines
 
 ```bash
-# PatchAlign3D, PatchAlign3D+ZeroKey, ULIP2, BT3D, GPT-4o, and other baselines
-zerokey baseline patchalign3d
-zerokey baseline patchalign3dzerokey
-zerokey baseline patchalign3dref
+# PatchAlign3D (unified: --mode selects variant)
+zerokey baseline patchalign3d                    # base patch matching
+zerokey baseline patchalign3d --mode zerokey      # hybrid MLLM + patch
+zerokey baseline patchalign3d --mode ref           # reference-view
+
+# Other baselines
 zerokey baseline ulip2ref
 zerokey baseline bt3d
 zerokey baseline gpt4o
 zerokey baseline clip-dinoiser
+zerokey baseline redcircle
+zerokey baseline saliency
 zerokey baseline stable-keypoints
+zerokey baseline paligemma
 
 # List all available baselines
 zerokey baseline --help
@@ -181,10 +189,13 @@ zerokey data render --save-dir ./rendered --keypointnet-dir $KEYPOINT_DATASET_PA
 ├── zerokey/                        # Main package (CLI + pipeline)
 │   ├── cli.py                      # Click CLI definition
 │   ├── _defaults.py                # Centralized env-var-backed path defaults
+│   ├── _detection.py               # KeypointDetectionMixin (shared detection methods)
+│   ├── rendering.py                # RenderO3D - PyTorch3D rendering base
+│   ├── candidate_optimization.py   # Quadratic assignment solver
 │   ├── commands/                   # CLI command groups
 │   │   ├── eval.py                 # eval command (zerokey eval --dataset ...)
 │   │   ├── baseline.py             # baseline subcommands
-│   │   ├── metric.py               # metric subcommands (IoU, debug, rawpts)
+│   │   ├── metric.py               # metric subcommands (IoU, debug, rawpts, schelling)
 │   │   ├── vis.py                  # visualization subcommands
 │   │   └── data.py                 # data preparation (sample, render)
 │   ├── models/                     # Multimodal model wrappers
@@ -192,23 +203,37 @@ zerokey data render --save-dir ./rendered --keypointnet-dir $KEYPOINT_DATASET_PA
 │   │   ├── gpt4o.py                # GPT-4o API integration
 │   │   └── red_circle.py           # Red-circle prompting wrapper
 │   ├── generators/                 # Pipeline generators (one per method)
-│   │   ├── kpnet.py                # KPNetGenerator - our main method
+│   │   ├── kpnet.py                # KPNetGenerator[_IO, _M] - our main method
 │   │   ├── human3m.py              # Human3MGenerator
 │   │   ├── realscene.py            # RealSceneGenerator
-│   │   ├── patchalign3d.py         # PatchAlign3DGenerator (baseline)
-│   │   ├── patchalign3dzerokey.py  # PatchAlign3DZeroKeyGenerator (baseline)
-│   │   ├── patchalign3dref.py      # PatchAlign3DRefGenerator (baseline)
+│   │   ├── patchalign3d.py         # PatchAlign3DGenerator (--mode patch|zerokey|ref)
 │   │   ├── ulip2ref.py             # ULIP2RefGenerator (baseline)
-│   │   └── ...                     # Other baselines (bt3d, gpt4o, etc.)
+│   │   ├── gpt4o.py                # GPT4oGenerator (baseline)
+│   │   ├── paligemma.py            # PaliGemmaGenerator (baseline)
+│   │   ├── clip_dinoiser.py        # ClipDINOiserGenerator (baseline)
+│   │   ├── redcircle.py            # RedCircleGenerator (baseline)
+│   │   ├── saliency.py             # SaliencyGenerator (baseline)
+│   │   ├── stable_keypoints.py     # StableKeypoints (baseline)
+│   │   └── bt3d.py                 # BT3D benchmark (baseline)
 │   ├── io/                         # I/O and evaluation classes
-│   ├── rendering.py                # RenderO3D - PyTorch3D rendering base
+│   │   ├── kpnet.py                # KPNetIO, KPNetEvaluator, RefIO
+│   │   ├── debug.py                # KPNetEvalDebug
+│   │   ├── rawpts.py               # Raw points evaluator
+│   │   └── schelling.py            # SchellingIO
 │   └── vis/                        # Visualization scripts
+│       ├── base.py                 # VisGeneratorBase
+│       ├── gpt4o.py                # GPT-4o annotation
+│       ├── demo.py                 # Demo pipeline
+│       ├── describe.py             # Point describability
+│       └── schelling.py            # Schelling point visualization
 │
-├── candidate_optimization.py       # Quadratic assignment solver
 ├── data_creation/                  # Data generation & preprocessing
 │   ├── keypointnet/                # KeypointNet sampling & rendering tools
 │   ├── big_vision/                 # PaliGemma / big_vision integration
+│   ├── mvimgnet/                   # MVImgNet data preparation
+│   ├── scene/                      # COLMAP / Gaussian Splatting utilities
 │   ├── pali_gemma.py               # PaliGemma model integration
+│   ├── gemma3.py                   # Gemma3 model integration
 │   └── common_data_utils.py        # Shared data utilities
 │
 ├── feature_backprojection/         # Feature extraction & projection
@@ -217,26 +242,29 @@ zerokey data render --save-dir ./rendered --keypointnet-dir $KEYPOINT_DATASET_PA
 │   └── saliency_extractor.py       # Saliency map extraction
 │
 ├── kp_utils/                       # Core utilities
-│   ├── data/                       # Dataset loaders
+│   ├── data/                       # Dataset loaders (KeypointNet, Schelling)
 │   ├── evaluation.py               # IoU, geodesic metrics
 │   ├── geometry.py                 # Geodesic distances, mesh ops
 │   └── rendering.py                # Renderer setup, viewpoints
 │
 ├── patchalign3d/                   # Point-BERT patch alignment
-│   ├── tools/                      # CLI tools & evaluation scripts
-│   │   ├── eval_cli.py             # Unified PatchAlign3D evaluation CLI
-│   │   ├── dump_matching_patch_features.py  # Patch feature extraction
-│   │   ├── preprocess_faust_partnete.py     # FAUST/PartNetE preprocessing
-│   │   └── seen_unseen_objaverse_general.py # Objaverse seen/unseen splits
 │   ├── models/                     # PointTransformer, PointTokenizer
 │   ├── data_utils/                 # ShapeNet, PartNet, Find3D dataloaders
-│   └── inference/                  # Patch feature extraction & inference
+│   ├── inference/                  # PatchExplorer, patch feature extraction
+│   │   └── explore_pc_patches.py   # PatchExplorer (inherits Molmo)
+│   └── tools/                      # CLI tools & evaluation scripts
+│       ├── eval_cli.py             # Unified PatchAlign3D evaluation CLI
+│       ├── dump_matching_patch_features.py  # Patch feature extraction
+│       ├── preprocess_faust_partnete.py     # FAUST/PartNetE preprocessing
+│       └── seen_unseen_objaverse_general.py # Objaverse seen/unseen splits
+│
+├── molmo/                          # Molmo model implementation
 ├── ULIP/                           # ULIP2 point cloud feature extraction
-├── clip_dinoiser/                  # Semantic segmentation module
-├── molmo/                          # Molmo implementation
-├── unsupervised_keypoints/         # Experimental methods
-├── tests/                          # Unit tests (22 test files)
+├── clip_dinoiser/                  # CLIP-DINOiser semantic segmentation
+├── unsupervised_keypoints/         # Experimental unsupervised methods
+├── tests/                          # Unit tests (23 test files)
 ├── pyproject.toml                  # Project config + pixi workspace
+├── pyrightconfig.json              # Type checking config (basic mode)
 ├── pixi.lock                       # Locked dependency versions
 ├── Dockerfile                      # CUDA 13.0 + pixi container
 └── docker-compose.yml              # GPU-enabled compose with dataset mounts
@@ -268,18 +296,20 @@ Keypoint Detection + Semantic Naming
 
 ```
 RenderO3D                          # Base rendering (PyTorch3D)
-└── KPNetGenerator                 # Main ZeroKey pipeline orchestrator
-    ├── Human3MGenerator           # Human body keypoints (Human3MIO)
-    ├── RealSceneGenerator         # Real scene keypoints (RealSceneIO)
-    ├── PatchAlign3DGenerator      # PatchAlign3D baseline (pure patch matching)
-    ├── PatchAlign3DZeroKeyGenerator  # PatchAlign3D + ZeroKey hybrid
-    ├── ULIP2RefGenerator          # ULIP2 reference view baseline
+└── KPNetGenerator[_IO, _M]       # Main ZeroKey pipeline orchestrator (Generic)
+    ├── Human3MGenerator           # Human body keypoints (Human3MIO, Molmo)
+    ├── RealSceneGenerator         # Real scene keypoints (RealSceneIO, Molmo)
+    ├── PatchAlign3DGenerator      # PatchAlign3D (--mode: patch|zerokey|ref)
+    │   └── ULIP2RefGenerator      # ULIP2 reference view baseline
     ├── GPT4oGenerator             # GPT-4o localization baseline
     ├── PaliGemmaGenerator         # PaliGemma baseline
     ├── RedCircleGenerator         # Red circle prompting baseline
-    ├── SaliencyGenerator          # Saliency-based baseline
+    ├── SaliencyGenerator          # Saliency-based (DINOv2) baseline
     ├── ClipDINOiserGenerator      # CLIP-DINOiser baseline
-    └── StableKeypointsGenerator   # Unsupervised keypoints baseline
+    └── StableKeypoints            # Unsupervised keypoints baseline
+
+Molmo                              # MLLM for point localization
+└── PatchExplorer                  # Patch-level 3D exploration (inherits Molmo)
 ```
 
 ### Key Components

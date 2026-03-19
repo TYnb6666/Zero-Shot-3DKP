@@ -181,7 +181,7 @@ def find_gaussian_loss_at_point(
 
     # Create Gaussian circle at the given position
     target = optimize_token.gaussian_circles(
-        pos, size=H, sigma=sigma, device=attn_map.device
+        pos, size=H, sigma=sigma, device=attn_map.device  # type: ignore[arg-type]
     )  # Assuming H and W are the same
     target = target.to(attn_map.device)
 
@@ -294,31 +294,31 @@ def optimize_embedding(
         from datasets.celeba import CelebA
         dataset = CelebA(split="train", dataset_loc=dataset_loc, align=False, max_len=max_len)
     elif dataset_name == "cub_aligned":
-        from datasets import cub
+        from datasets import cub  # type: ignore[attr-defined]
         dataset = cub.TrainSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "cub_001":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train", single_class=1)
     elif dataset_name == "cub_002":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train", single_class=2)
     elif dataset_name == "cub_003":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train", single_class=3)
     elif dataset_name == "cub_all":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train")
     elif dataset_name == "taichi":
-        from datasets import taichi
+        from datasets import taichi  # type: ignore[attr-defined]
         dataset = taichi.TrainSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "human3.6m":
-        from datasets import human36m
+        from datasets import human36m  # type: ignore[attr-defined]
         dataset = human36m.TrainSet(data_root=dataset_loc, validation=validation)
     elif dataset_name == "unaligned_human3.6m":
-        from datasets import unaligned_human36m
+        from datasets import unaligned_human36m  # type: ignore[attr-defined]
         dataset = unaligned_human36m.TrainSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "deepfashion":
-        from datasets import deepfashion
+        from datasets import deepfashion  # type: ignore[attr-defined]
         dataset = deepfashion.TrainSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "custom":
         from . import custom_images
@@ -409,7 +409,7 @@ def optimize_embedding(
                 )
             elif top_k_strategy == "gaussian":
                 top_embedding_indices = ptp_utils.find_top_k_gaussian(
-                    attn_map, furthest_point_num_samples, sigma=sigma, num_subjects=num_subjects
+                    attn_map, furthest_point_num_samples, sigma=sigma, num_subjects=num_subjects  # type: ignore[arg-type]
                 )
             elif top_k_strategy == "consistent":
                 top_embedding_indices = torch.arange(furthest_point_num_samples)

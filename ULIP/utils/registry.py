@@ -223,7 +223,7 @@ class Registry:
             return self.deprecated_register_module(name, force=force)
 
         # raise the error ahead of time
-        if not (name is None or isinstance(name, str) or misc.is_seq_of(name, str)):
+        if not (name is None or isinstance(name, str) or misc.is_seq_of(name, str)):  # type: ignore[name-defined]
             raise TypeError(
                 'name must be either of None, an instance of str or a sequence'
                 f'  of str, but got {type(name)}')

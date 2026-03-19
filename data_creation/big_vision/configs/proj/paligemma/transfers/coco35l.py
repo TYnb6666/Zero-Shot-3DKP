@@ -148,12 +148,12 @@ def get_config(arg=None):
       lang: training_data(c.res, lang=lang, crop=c.crop)
       for lang in LANGUAGES
   }
-  c.input.data = {lang: 1 for lang in LANGUAGES}
-  for k in c.input.data:
+  c.input.data = {lang: 1 for lang in LANGUAGES}  # type: ignore[attr-defined]
+  for k in c.input.data:  # type: ignore[attr-defined]
     c.input[k].shuffle_buffer_size = 10_000
 
   c.total_examples = 566_435  # We need to go a looot longer here.
-  c.input.batch_size = 256
+  c.input.batch_size = 256  # type: ignore[attr-defined]
   c.optax_name = 'scale_by_adam'
   c.optax = dict(b2=0.999)
   c.lr = 1e-4
@@ -178,8 +178,8 @@ def get_config(arg=None):
   # Model section.
   c.model_name = 'proj.paligemma.paligemma'
   c.model = {}
-  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)
-  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)
+  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)  # type: ignore[attr-defined]
+  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)  # type: ignore[attr-defined]
   c.model_init = f'pt_{c.res}'
 
   # FSDP strategy.
@@ -200,7 +200,7 @@ def get_config(arg=None):
 
   if c.mode == 'runlocal':
     c.log_training_steps = 1
-    c.input.batch_size = 2
+    c.input.batch_size = 2  # type: ignore[attr-defined]
 
   c.seed = 0
   return c

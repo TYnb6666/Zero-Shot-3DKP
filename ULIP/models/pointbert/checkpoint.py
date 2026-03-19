@@ -57,7 +57,7 @@ def _strip_prefix_if_present(state_dict: Dict[str, Any], prefix: str) -> None:
 
     # also strip the prefix in metadata, if any..
     try:
-        metadata = state_dict._metadata  # pyre-ignore
+        metadata = state_dict._metadata  # pyre-ignore  # type: ignore[attr-defined]
     except AttributeError:
         pass
     else:

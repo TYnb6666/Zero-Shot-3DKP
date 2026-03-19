@@ -123,7 +123,7 @@ def main(argv):
       preprocess_fn=pp_builder.get_preprocess_fn(config.input.get("pp")),
       shuffle_buffer_size=config.input.get("shuffle_buffer_size"),
       cache_raw=config.input.get("cache_raw", False),
-      filter_fn=config.input.get("filter_fn"),
+      filter_fn=config.input.get("filter_fn"),  # type: ignore[call-overload]
   )
 
   # Start prefetching already.
@@ -216,7 +216,7 @@ def main(argv):
         params, state, batch)
     l, grads = jax.lax.pmean((l, grads), axis_name="batch")
     updates, opt = tx.update(grads, opt, params)
-    params = optax.apply_updates(params, updates)
+    params = optax.apply_updates(params, updates)  # type: ignore[attr-defined]
     state = aux.pop("state")
     measurements = {**measurements, **aux}
 
@@ -273,7 +273,7 @@ def main(argv):
         "chrono": chrono.save(),
     }
     checkpoint_tree = jax.tree_structure(checkpoint)
-    loaded = u.load_checkpoint(checkpoint_tree, resume_ckpt_path)
+    loaded = u.load_checkpoint(checkpoint_tree, resume_ckpt_path)  # type: ignore[attr-defined]
     # bfloat16 type gets lost when data is saved to disk, so we recover it.
     checkpoint = jax.tree_map(u.recover_dtype, loaded)
     params_cpu = checkpoint["params"]
@@ -292,7 +292,7 @@ def main(argv):
 
   write_note("Kicking off misc stuff...")
   first_step = bv_optax.get_count(opt_cpu)
-  chrono.inform(first_step, total_steps, batch_size, ntrain_img / batch_size)
+  chrono.inform(first_step, total_steps, batch_size, ntrain_img / batch_size)  # type: ignore[call-overload]
   prof = None  # Keeps track of start/stop of profiler state.
 
   write_note(f"Replicating...\n{chrono.note}")
@@ -309,7 +309,7 @@ def main(argv):
 
   # Using a python integer for step here, because opt.state.step is allocated
   # on TPU during replication.
-  for step, batch in zip(range(first_step + 1, total_steps + 1), train_iter):
+  for step, batch in zip(range(first_step + 1, total_steps + 1), train_iter):  # type: ignore[operator]
     mw.step_start(step)
 
     with jax.profiler.StepTraceAnnotation("train_step", step_num=step):
@@ -324,7 +324,7 @@ def main(argv):
 
     # On the first host, let's always profile a handful of early steps.
     if jax.process_index() == 0:
-      prof = u.startstop_prof(prof, step, first_step, get_steps("log_training"))
+      prof = u.startstop_prof(prof, step, first_step, get_steps("log_training"))  # type: ignore[arg-type]
 
     # Report training progress
     if (u.itstime(step, get_steps("log_training"), total_steps, host=0)
@@ -335,15 +335,15 @@ def main(argv):
       for name, value in measurements.items():
         mw.measure(name, value[0])
       chrono.tick(step, mw.measure, write_note)
-      if not np.isfinite(l):
+      if not np.isfinite(l):  # type: ignore[call-overload, arg-type]
         error = (f"The loss became nan or inf somewhere within steps "
-                 f"[{step - get_steps('log_training')}, {step}]")
+                 f"[{step - get_steps('log_training')}, {step}]")  # type: ignore[operator]
         break
 
     # Checkpoint saving
     if (save_ckpt_path and
-        (u.itstime(step, get_steps("ckpt", None), total_steps, host=0) or
-         u.itstime(step, get_steps("keep_ckpt", None), total_steps, host=0))):
+        (u.itstime(step, get_steps("ckpt", None), total_steps, host=0) or  # type: ignore[arg-type]
+         u.itstime(step, get_steps("keep_ckpt", None), total_steps, host=0))):  # type: ignore[arg-type]
       chrono.pause(wait_for=(params_repl, opt_repl, state_repl))
       u.checkpointing_timeout(ckpt_writer, config.get("ckpt_timeout", 1))
       # We need to transfer the weights over now or else we risk keeping them
@@ -354,7 +354,7 @@ def main(argv):
 
       # Check whether we want to keep a copy of the current checkpoint.
       copy_step = None
-      if u.itstime(step, get_steps("keep_ckpt", None), total_steps):
+      if u.itstime(step, get_steps("keep_ckpt", None), total_steps):  # type: ignore[arg-type]
         copy_step = step
 
       ckpt = {
@@ -364,7 +364,7 @@ def main(argv):
           "chrono": chrono.save(),
       }
       ckpt_writer = pool.apply_async(
-          u.save_checkpoint, (ckpt, save_ckpt_path, copy_step))
+          u.save_checkpoint, (ckpt, save_ckpt_path, copy_step))  # type: ignore[attr-defined]
       chrono.resume()
 
     for (name, evaluator, log_steps, prefix) in evaluators():

@@ -51,13 +51,13 @@ def get_config(arg=None):
   config = mlc.ConfigDict()
 
   config.input = {}
-  config.input.data = dict(
+  config.input.data = dict(  # type: ignore[attr-defined]
       name=dict(flowers='oxford_flowers102', pet='oxford_iiit_pet')[arg.data],
       split=dict(flowers='train', pet='train[:90%]')[arg.data],
   )
-  config.input.batch_size = 512
-  config.input.cache_raw = True
-  config.input.shuffle_buffer_size = 50_000
+  config.input.batch_size = 512  # type: ignore[attr-defined]
+  config.input.cache_raw = True  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 50_000  # type: ignore[attr-defined]
   config.prefetch_to_device = 4
 
   config.num_classes = NCLS[arg.data]
@@ -84,7 +84,7 @@ def get_config(arg=None):
       f'|onehot({config.num_classes}, key="label", key_result="labels")'
       '|keep("image", "labels")'
   )
-  config.input.pp = f'decode|{arg.crop}|flip_lr' + pp_common
+  config.input.pp = f'decode|{arg.crop}|flip_lr' + pp_common  # type: ignore[attr-defined]
   ppv = 'decode|resize_small(160)|central_crop(128)' + pp_common
 
   config.mixup = dict(p=1.0)
@@ -131,15 +131,15 @@ def get_config(arg=None):
         log_steps=500,
     )
   config.evals = {}
-  config.evals.student_train = get_eval(minitrain_split)
-  config.evals.student_val = get_eval(val_split)
-  config.evals.student_test = get_eval(test_split)
+  config.evals.student_train = get_eval(minitrain_split)  # type: ignore[attr-defined]
+  config.evals.student_val = get_eval(val_split)  # type: ignore[attr-defined]
+  config.evals.student_test = get_eval(test_split)  # type: ignore[attr-defined]
 
   # Teacher is fixed, so rare evals.
   teacher = dict(log_steps=100_000, pred='prof_m_fwd')
-  config.evals.teacher_train = {**config.evals.student_train, **teacher}
-  config.evals.teacher_val = {**config.evals.student_val, **teacher}
-  config.evals.teacher_test = {**config.evals.student_test, **teacher}
+  config.evals.teacher_train = {**config.evals.student_train, **teacher}  # type: ignore[attr-defined]
+  config.evals.teacher_val = {**config.evals.student_val, **teacher}  # type: ignore[attr-defined]
+  config.evals.teacher_test = {**config.evals.student_test, **teacher}  # type: ignore[attr-defined]
 
   # Could in principle also look at agreement on other datasets!
   def get_dist(split):
@@ -152,13 +152,13 @@ def get_config(arg=None):
         distances=({'kind': 'kl'}, {'kind': 'euclidean'},
                    {'kind': 'agree', 'k': 1}, {'kind': 'agree', 'k': 5}),
     )
-  config.evals.dist_train = get_dist(minitrain_split)
-  config.evals.dist_val = get_dist(val_split)
-  config.evals.dist_test = get_dist(test_split)
+  config.evals.dist_train = get_dist(minitrain_split)  # type: ignore[attr-defined]
+  config.evals.dist_val = get_dist(val_split)  # type: ignore[attr-defined]
+  config.evals.dist_test = get_dist(test_split)  # type: ignore[attr-defined]
 
   # Make a few things much smaller for quick local debugging testruns.
   if arg.runlocal:
-    config.input.shuffle_buffer_size = 10
-    config.input.batch_size = 8
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
+    config.input.batch_size = 8  # type: ignore[attr-defined]
 
   return config

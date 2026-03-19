@@ -51,10 +51,10 @@ class PreprocessOpsTest(tf.test.TestCase):
     data = {"image": 1, "labels": 2, "something": 3}
 
     for data_keep in self.tfrun(pp.get_keep("image", "labels"), data):
-      self.assertAllEqual(set(data_keep.keys()), {"image", "labels"})
+      self.assertAllEqual(set(data_keep.keys()), {"image", "labels"})  # type: ignore[attr-defined]
 
     for data_drop in self.tfrun(pp.get_drop("image", "labels"), data):
-      self.assertAllEqual(set(data_drop.keys()), {"something"})
+      self.assertAllEqual(set(data_drop.keys()), {"something"})  # type: ignore[attr-defined]
 
   def test_onehot(self):
     data = {"labels": tf.constant(2, dtype=tf.int64)}
@@ -180,25 +180,25 @@ class PreprocessOpsTest(tf.test.TestCase):
     # n == nelems should be identity (and keep ordering!)
     data = self._data_for_choice()
     for k in ("one_f32", "one_str", "one_vec"):
-      for out in self.tfrun(pp.get_choice(n=1, key=[k]), data):
+      for out in self.tfrun(pp.get_choice(n=1, key=[k]), data):  # type: ignore[arg-type]
         self.assertAllEqual(out[k], data[k])
-      for out in self.tfrun(pp.get_choice(n=[1, 1], key=[k]), data):
+      for out in self.tfrun(pp.get_choice(n=[1, 1], key=[k]), data):  # type: ignore[arg-type]
         self.assertAllEqual(out[k], data[k])
     for k in ("two_f32", "two_str", "two_vec"):
-      for out in self.tfrun(pp.get_choice(n=2, key=[k]), data):
+      for out in self.tfrun(pp.get_choice(n=2, key=[k]), data):  # type: ignore[arg-type]
         self.assertAllEqual(out[k], data[k])
-      for out in self.tfrun(pp.get_choice(n=[2, 2], key=[k]), data):
+      for out in self.tfrun(pp.get_choice(n=[2, 2], key=[k]), data):  # type: ignore[arg-type]
         self.assertAllEqual(out[k], data[k])
 
   def test_choice_n(self):
     # n < nelems should be one of them:
     data = self._data_for_choice()
     for k in ("two_f32", "two_str"):
-      for out in self.tfrun(pp.get_choice(n=1, key=[k]), data):
+      for out in self.tfrun(pp.get_choice(n=1, key=[k]), data):  # type: ignore[arg-type]
         self.assertIn(out[k], data[k])
 
     # Special testing for vectors.
-    for out in self.tfrun(pp.get_choice(n=1, key=["two_vec"]), data):
+    for out in self.tfrun(pp.get_choice(n=1, key=["two_vec"]), data):  # type: ignore[arg-type]
       self.assertTrue(tf.logical_or(
           tf.reduce_all(out["two_vec"][0] == data["two_vec"][0]),
           tf.reduce_all(out["two_vec"][0] == data["two_vec"][1]),
@@ -207,7 +207,7 @@ class PreprocessOpsTest(tf.test.TestCase):
   def test_choice_multi(self):
     # Select consistently across multiple keys.
     data = self._data_for_choice()
-    op = pp.get_choice(n=1, key=["two_f32", "two_str"])
+    op = pp.get_choice(n=1, key=["two_f32", "two_str"])  # type: ignore[arg-type]
     for out in self.tfrun(op, data):
       self.assertTrue(tf.logical_or(
           tf.logical_and(
@@ -224,7 +224,7 @@ class PreprocessOpsTest(tf.test.TestCase):
     # n < nelems should be one of them:
     data = self._data_for_choice()
     for k in ("two_f32", "two_str", "two_vec"):
-      for out in self.tfrun(pp.get_choice(n=[1, 2], key=[k]), data):
+      for out in self.tfrun(pp.get_choice(n=[1, 2], key=[k]), data):  # type: ignore[arg-type]
         self.assertTrue(tf.reduce_any([
             tf.reduce_all(out[k] == data[k][0:1]),
             tf.reduce_all(out[k] == data[k][1:2]),

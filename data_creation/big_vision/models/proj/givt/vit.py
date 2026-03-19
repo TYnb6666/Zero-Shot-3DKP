@@ -90,7 +90,7 @@ class Model(vae.Model):
 
     # Setting num_outputs to 2 * codeword_dim to predict mean and variance per
     # element
-    self.encoder_head = nn.Dense(self.codeword_dim * 2 or self.width * 2)
+    self.encoder_head = nn.Dense(self.codeword_dim * 2 or self.width * 2)  # type: ignore[operator]
     self.decoder_stem = nn.Dense(self.width)
 
     kw = {"kernel_init": nn.initializers.zeros} if self.head_zeroinit else {}

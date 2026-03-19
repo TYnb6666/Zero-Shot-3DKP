@@ -30,14 +30,14 @@ def get_config(arg='res=512,patch_size=16'):
   config.task = 'proj.uvim.colorization_task'
 
   config.input = {}
-  config.input.data = dict(name='imagenet2012', split='train[4096:]')
+  config.input.data = dict(name='imagenet2012', split='train[4096:]')  # type: ignore[attr-defined]
 
-  config.input.batch_size = 1024
-  config.input.shuffle_buffer_size = 25_000
+  config.input.batch_size = 1024  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 25_000  # type: ignore[attr-defined]
 
   config.total_epochs = 100
 
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       f'decode_jpeg_and_inception_crop({arg.res})'
       f'|flip_lr'
       f'|copy(inkey="image", outkey="labels")'
@@ -97,24 +97,24 @@ def get_config(arg='res=512,patch_size=16'):
 
   # Evaluation section
   config.evals = {}
-  config.evals.val = mlc.ConfigDict()
-  config.evals.val.type = 'proj.uvim.compute_mean'
-  config.evals.val.pred = 'validation'
-  config.evals.val.data = {**config.input.data}
-  config.evals.val.data.split = 'train[:4096]'
-  config.evals.val.pp_fn = pp_eval
-  config.evals.val.log_steps = 250
+  config.evals.val = mlc.ConfigDict()  # type: ignore[attr-defined]
+  config.evals.val.type = 'proj.uvim.compute_mean'  # type: ignore[attr-defined]
+  config.evals.val.pred = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.data = {**config.input.data}  # type: ignore[attr-defined]
+  config.evals.val.data.split = 'train[:4096]'  # type: ignore[attr-defined]
+  config.evals.val.pp_fn = pp_eval  # type: ignore[attr-defined]
+  config.evals.val.log_steps = 250  # type: ignore[attr-defined]
 
   base = {
       'type': 'proj.uvim.psnr',
       'pp_fn': pp_eval.replace('decode|', ''),
       'log_steps': 10_000,
   }
-  config.evals.psnr_train = dict(**base, split='train[4096:8192]')
-  config.evals.psnr_holdout = dict(**base, split='train[:4096]')
-  config.evals.psnr_val = dict(**base, split='validation')
+  config.evals.psnr_train = dict(**base, split='train[4096:8192]')  # type: ignore[attr-defined]
+  config.evals.psnr_holdout = dict(**base, split='train[:4096]')  # type: ignore[attr-defined]
+  config.evals.psnr_val = dict(**base, split='validation')  # type: ignore[attr-defined]
 
-  config.evals.colorization_val_coltran_fid = {
+  config.evals.colorization_val_coltran_fid = {  # type: ignore[attr-defined]
       'type': 'proj.uvim.coltran_fid',
       'log_steps': 100_000,
   }
@@ -129,23 +129,23 @@ def get_config(arg='res=512,patch_size=16'):
   config.seed = 0
 
   if arg.singlehost:
-    config.input.batch_size = 128
+    config.input.batch_size = 128  # type: ignore[attr-defined]
     config.total_epochs = 20
   elif arg.runlocal:
-    config.input.batch_size = 16
-    config.input.shuffle_buffer_size = 10
+    config.input.batch_size = 16  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
     config.log_training_steps = 5
     config.model.enc_depth = 1
     config.model.dec_depth = 1
-    config.evals.val.data.split = 'validation[:16]'
-    config.evals.val.log_steps = 20
-    config.evals.psnr_train.split = 'train[:256]'
-    config.evals.psnr_train.log_steps = 20
-    config.evals.psnr_holdout.split = 'train[256:512]'
-    config.evals.psnr_holdout.log_steps = 20
-    config.evals.psnr_val.split = 'train[:256]'
-    config.evals.psnr_val.log_steps = 20
-    config.evals.colorization_val_coltran_fid.split = 'validation[:256]'
-    config.evals.colorization_val_coltran_fid.log_steps = 20
+    config.evals.val.data.split = 'validation[:16]'  # type: ignore[attr-defined]
+    config.evals.val.log_steps = 20  # type: ignore[attr-defined]
+    config.evals.psnr_train.split = 'train[:256]'  # type: ignore[attr-defined]
+    config.evals.psnr_train.log_steps = 20  # type: ignore[attr-defined]
+    config.evals.psnr_holdout.split = 'train[256:512]'  # type: ignore[attr-defined]
+    config.evals.psnr_holdout.log_steps = 20  # type: ignore[attr-defined]
+    config.evals.psnr_val.split = 'train[:256]'  # type: ignore[attr-defined]
+    config.evals.psnr_val.log_steps = 20  # type: ignore[attr-defined]
+    config.evals.colorization_val_coltran_fid.split = 'validation[:256]'  # type: ignore[attr-defined]
+    config.evals.colorization_val_coltran_fid.log_steps = 20  # type: ignore[attr-defined]
 
   return config

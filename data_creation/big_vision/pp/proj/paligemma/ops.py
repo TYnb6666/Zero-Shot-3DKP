@@ -56,7 +56,7 @@ def tokenize_constant(model, text, bos='no', eos='no', length=None):
 
 
 @Registry.register('preprocess_ops.tolen')
-@utils.InKeyOutKey(indefault=None, outdefault=None, with_data=True)
+@utils.InKeyOutKey(indefault=None, outdefault=None, with_data=True)  # type: ignore[arg-type]
 def get_tolen(length, *, sticky_end=False, pad_value=None, pad_key=None):
   """Gets token to a fixed length."""
   def _tolen(x, data):

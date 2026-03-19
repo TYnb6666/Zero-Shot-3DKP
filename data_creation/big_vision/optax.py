@@ -31,7 +31,7 @@ def get_count(opt_state, jittable=False):
   """Returns `ScaleByScheduleState.count` from `opt_state` as an integer."""
   counts = [
       state.count
-      for state in find_states(opt_state, optax.ScaleByScheduleState)
+      for state in find_states(opt_state, optax.ScaleByScheduleState)  # type: ignore[attr-defined]
   ]
   if jittable:
     return counts[0]
@@ -53,23 +53,23 @@ def replace_frozen(schedule, pytree, replacement, log=None):
 
 def clip_by_per_example_global_norm(
     max_norm: float,
-) -> optax.GradientTransformation:
+) -> optax.GradientTransformation:  # type: ignore[attr-defined]
   """Clips the norm of per-example gradients."""
 
   def init_fn(params):
     del params
-    return optax.EmptyState()
+    return optax.EmptyState()  # type: ignore[attr-defined]
 
   def update_fn(updates, state, params=None):
     del params
     grads_flat, grads_treedef = jax.tree_util.tree_flatten(updates)
     batch_size = grads_flat[0].shape[0]
-    clipped, _ = optax.per_example_global_norm_clip(grads_flat, max_norm)
+    clipped, _ = optax.per_example_global_norm_clip(grads_flat, max_norm)  # type: ignore[attr-defined]
     grads_sum = jax.tree_util.tree_unflatten(grads_treedef, clipped)
     grads_mean = jax.tree_util.tree_map(lambda x: x / batch_size, grads_sum)
     return grads_mean, state
 
-  return optax.GradientTransformation(init_fn, update_fn)
+  return optax.GradientTransformation(init_fn, update_fn)  # type: ignore[attr-defined]
 
 
 def make(config, params, *, sched_kw):
@@ -87,13 +87,13 @@ def make(config, params, *, sched_kw):
     return u.create_learning_rate_schedule(base=mult, **kw)
   schedule_fns = [create_schedule(**sched_kw, **sched) for sched in scheds]
   schedule_txs = [
-      optax.masked(optax.scale_by_schedule(schedule_fn), mask)
+      optax.masked(optax.scale_by_schedule(schedule_fn), mask)  # type: ignore[attr-defined]
       for schedule_fn, mask in zip(schedule_fns, masks)
   ] + [
       # Removes weight decay updates. Note that weight decay already has an
       # independent mask (which cannot be combined easily with a second mask),
       # so instead we multiply updates for frozen params with zero.
-      optax.masked(optax.set_to_zero(), frozen_mask)
+      optax.masked(optax.set_to_zero(), frozen_mask)  # type: ignore[attr-defined]
   ]
 
   # Gradient clipping.
@@ -101,24 +101,24 @@ def make(config, params, *, sched_kw):
     if config.get("grad_clip_per_example"):
       clip_tx = clip_by_per_example_global_norm(clip_norm)
     else:
-      clip_tx = optax.clip_by_global_norm(clip_norm)
-    grad_clip_norm_tx = optax.masked(clip_tx, not_frozen_mask)
+      clip_tx = optax.clip_by_global_norm(clip_norm)  # type: ignore[attr-defined]
+    grad_clip_norm_tx = optax.masked(clip_tx, not_frozen_mask)  # type: ignore[attr-defined]
   else:
-    grad_clip_norm_tx = optax.identity()
+    grad_clip_norm_tx = optax.identity()  # type: ignore[attr-defined]
 
   # Optimizer updates.
   tx_func = operator.attrgetter(config.optax_name)(optax)
-  opt_txs = [optax.masked(tx_func(**config.get("optax", {})), not_frozen_mask)]
+  opt_txs = [optax.masked(tx_func(**config.get("optax", {})), not_frozen_mask)]  # type: ignore[attr-defined]
   assert "optim" not in config, "Deprecated option, use config.optax."
 
   # Learning rate multipliers. Defaults to 1.0.
-  lr_mult_txs = [optax.scale(config.lr)]
+  lr_mult_txs = [optax.scale(config.lr)]  # type: ignore[attr-defined]
   if config.get("lr_mults"):
     masks, mults = _make_mask_trees(params, config.lr_mults, "config.lr_mults")
     assert all(mult > 0 for mult in mults), (
         f"Use schedule=None for parameter freezing instead of lr_mults={mults}")
     lr_mult_txs += [
-        optax.masked(optax.scale(mult), mask)
+        optax.masked(optax.scale(mult), mask)  # type: ignore[attr-defined]
         for mult, mask in zip(mults, masks)
     ]
 
@@ -133,20 +133,20 @@ def make(config, params, *, sched_kw):
     wd_mults = config.get("wd_mults", [(".*/kernel$", 1.0)])
     masks, mults = _make_mask_trees(params, wd_mults, "config.wd_mults")
     weight_decay_txs = [
-        optax.add_decayed_weights(config.wd * mult, mask)
+        optax.add_decayed_weights(config.wd * mult, mask)  # type: ignore[attr-defined]
         for mult, mask in zip(mults, masks)
     ]
   else:
     weight_decay_txs = []
 
   # Combine gradient updates and learning rate schedules.
-  return optax.chain(
+  return optax.chain(  # type: ignore[attr-defined]
       grad_clip_norm_tx,
       *opt_txs,
       *lr_mult_txs,
       *weight_decay_txs,
       *schedule_txs,
-      optax.scale(-1.0)), schedule_fns
+      optax.scale(-1.0)), schedule_fns  # type: ignore[attr-defined]
 
 
 def _make_mask_trees(params, patterns_values, log):
@@ -181,7 +181,7 @@ def _split_frozen(masks, scheds):
 
 # A dummy object to allow for foo.bar access syntax, see
 # https://stackoverflow.com/a/19476841/2366315
-optax.big_vision = type("", (), {})()
+optax.big_vision = type("", (), {})()  # type: ignore[attr-defined]
 
 
 def scale_by_adafactor(min_dim_size_to_factor=32,
@@ -197,7 +197,7 @@ def scale_by_adafactor(min_dim_size_to_factor=32,
     t = jnp.array(i, jnp.float32) + 1.0
     return jnp.minimum(beta2_cap, 1.0 - t**(-exponent))
 
-  scale_by_rms = optax.scale_by_factored_rms(
+  scale_by_rms = optax.scale_by_factored_rms(  # type: ignore[attr-defined]
       factored=True,
       decay_rate=decay_rate,
       step_offset=decay_offset,
@@ -205,21 +205,21 @@ def scale_by_adafactor(min_dim_size_to_factor=32,
       epsilon=eps,
       decay_rate_fn=_decay_rate_pow)
 
-  clip = (optax.clip_by_block_rms(clipping_threshold) if clipping_threshold
-          else optax.identity())
+  clip = (optax.clip_by_block_rms(clipping_threshold) if clipping_threshold  # type: ignore[attr-defined]
+          else optax.identity())  # type: ignore[attr-defined]
 
-  mom = (optax.ema(momentum, debias=False, accumulator_dtype=dtype_momentum)
-         if momentum else optax.identity())
+  mom = (optax.ema(momentum, debias=False, accumulator_dtype=dtype_momentum)  # type: ignore[attr-defined]
+         if momentum else optax.identity())  # type: ignore[attr-defined]
 
-  return optax.chain(scale_by_rms, clip, mom)
+  return optax.chain(scale_by_rms, clip, mom)  # type: ignore[attr-defined]
 
-optax.big_vision.scale_by_adafactor = scale_by_adafactor  # pytype: disable=module-attr
+optax.big_vision.scale_by_adafactor = scale_by_adafactor  # pytype: disable=module-attr  # type: ignore[attr-defined]
 
 
 # A few more aliases we use frequently:
 def momentum_hp(momentum=0.9, dtype=jnp.bfloat16, nesterov=False):
   """SGD-Momentum with half-precision accumulator."""
-  return optax.trace(decay=momentum, accumulator_dtype=dtype, nesterov=nesterov)
+  return optax.trace(decay=momentum, accumulator_dtype=dtype, nesterov=nesterov)  # type: ignore[attr-defined]
 
-optax.big_vision.momentum_hp = momentum_hp  # pytype: disable=module-attr
-optax.big_vision.sgd = optax.identity  # pytype: disable=module-attr
+optax.big_vision.momentum_hp = momentum_hp  # pytype: disable=module-attr  # type: ignore[attr-defined]
+optax.big_vision.sgd = optax.identity  # pytype: disable=module-attr  # type: ignore[attr-defined]

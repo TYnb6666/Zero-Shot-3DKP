@@ -74,4 +74,4 @@ class Evaluator:
     if jax.process_index():  # Host0 gets all preds and does eval.
       return
 
-    yield "num_examples", len(res)
+    yield "num_examples", len(res)  # type: ignore[arg-type]

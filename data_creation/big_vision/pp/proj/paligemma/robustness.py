@@ -66,7 +66,7 @@ def get_random_jpeg(p):
     """Resizes image to a given size."""
     funcs = [lambda: image] + [lambda fn=fn: fn(image) for fn in fns]
     logits = [math.log(prob) for prob in [1 - p] + [p / len(fns)] * len(fns)]
-    fn_idx = tf.random.categorical([logits], 1, dtype=tf.int32)[0, 0]
+    fn_idx = tf.random.categorical([logits], 1, dtype=tf.int32)[0, 0]  # type: ignore[arg-type]
     return tf.switch_case(fn_idx, funcs)
 
   return _random_jpeg

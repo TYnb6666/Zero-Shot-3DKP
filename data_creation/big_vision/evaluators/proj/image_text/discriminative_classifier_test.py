@@ -69,7 +69,7 @@ class _Model(nn.Module):
 
   class DiscriminativeClassifierTest(tf.test.TestCase):
 
-  def test_prepare_datasets(self):
+  def test_prepare_datasets(self):  # type: ignore[misc]
 
     def generator():
       yield {

@@ -14,7 +14,7 @@ import numpy.typing as npt
 from io import BytesIO
 
 from zerokey.io.kpnet import RefIO
-from zerokey.generators.patchalign3d import PatchAlign3DGenerator
+from zerokey.generators.patchalign3d import PatchAlign3DGenerator, match_reference_features
 
 import ULIP.models.ULIP_models as ulip_models
 
@@ -215,38 +215,7 @@ class ULIP2RefGenerator(PatchAlign3DGenerator):
         with self.io.sample_reference_view(npz_file, kp_list, mesh, class_title) as used_as_reference:
             if not used_as_reference:
                 raise LookupError("No reference view found")
+            d = match_reference_features(self.io, npz_file, kp_list, class_title, self.device)
 
-            centers = []
-            # Match query
-            for semantic_id, _kp in kp_list.items():
-                text_feat = self.io.get_reference_features(class_title, semantic_id).to(self.device)
-
-                with BytesIO(npz_file) as in_buffer:
-                    d = dict(np.load(in_buffer, allow_pickle=True))
-
-                # Use projected features if available, otherwise fall back to raw embeddings
-                patch_feat = d.get('patch_feat', d.get('patch_emb', None))
-                if patch_feat is None:
-                    raise ValueError("Neither patch_feat nor patch_emb found in npz file")
-
-                # Compute similarities
-                patch_feat_torch = torch.from_numpy(patch_feat).float().to(self.device)
-                similarities = torch.einsum('gd,d->g', patch_feat_torch, text_feat)
-                distances = 1 - similarities
-
-                similarities_np = similarities.cpu().numpy()
-                distances_np = distances.cpu().numpy()
-
-                print(f"\n✓ Computed similarities for {len(patch_feat)} patches")
-                print(f"  Similarity range: [{similarities_np.min():.4f}, {similarities_np.max():.4f}]")
-                print(f"  Distance range:   [{distances_np.min():.4f}, {distances_np.max():.4f}]")
-
-                # Find top matches
-                top_indices = np.argsort(distances_np)[0]
-                centers.append(d['patch_centers'][top_indices])
-
-        d['top_centers'] = centers
-        ret = {frozenset(kp_list.keys()): self.backproject_kps(mesh, fragments, R, T, (d,))}
-
-        return ret
+        return {frozenset(kp_list.keys()): self.backproject_kps(mesh, fragments, R, T, (d,))}
 

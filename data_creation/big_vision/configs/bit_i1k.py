@@ -37,17 +37,17 @@ def get_config(runlocal=False):
   config.loss = 'softmax_xent'
 
   config.input = dict()
-  config.input.data = dict(
+  config.input.data = dict(  # type: ignore[attr-defined]
       name='imagenet2012',
       split='train[:99%]',
   )
-  config.input.batch_size = 4096
-  config.input.cache_raw = True  # Needs up to 120GB of RAM!
-  config.input.shuffle_buffer_size = 250_000  # Per host.
+  config.input.batch_size = 4096  # type: ignore[attr-defined]
+  config.input.cache_raw = True  # Needs up to 120GB of RAM!  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 250_000  # Per host.  # type: ignore[attr-defined]
 
   pp_common = '|onehot(1000, key="{lbl}", key_result="labels")'
   pp_common += '|value_range(-1, 1)|keep("image", "labels")'
-  config.input.pp = 'decode_jpeg_and_inception_crop(224)|flip_lr' + pp_common.format(lbl='label')
+  config.input.pp = 'decode_jpeg_and_inception_crop(224)|flip_lr' + pp_common.format(lbl='label')  # type: ignore[attr-defined]
   pp_eval = 'decode|resize_small(256)|central_crop(224)' + pp_common
 
   config.log_training_steps = 50
@@ -65,8 +65,8 @@ def get_config(runlocal=False):
   config.grad_clip_norm = 1.0
 
   # linear scaling rule. Don't forget to sweep if sweeping batch_size.
-  config.wd = (1e-4 / 256) * config.input.batch_size
-  config.lr = (0.1 / 256) * config.input.batch_size
+  config.wd = (1e-4 / 256) * config.input.batch_size  # type: ignore[attr-defined]
+  config.lr = (0.1 / 256) * config.input.batch_size  # type: ignore[attr-defined]
   config.schedule = dict(decay_type='cosine', warmup_steps=1000)
 
   # Eval section
@@ -80,23 +80,23 @@ def get_config(runlocal=False):
         cache='final_data',
     )
   config.evals = {}
-  config.evals.train = get_eval('train[:2%]')
-  config.evals.minival = get_eval('train[99%:]')
-  config.evals.val = get_eval('validation')
-  config.evals.v2 = get_eval('test', dataset='imagenet_v2')
-  config.evals.real = get_eval('validation', dataset='imagenet2012_real')
-  config.evals.real.pp_fn = pp_eval.format(lbl='real_label')
+  config.evals.train = get_eval('train[:2%]')  # type: ignore[attr-defined]
+  config.evals.minival = get_eval('train[99%:]')  # type: ignore[attr-defined]
+  config.evals.val = get_eval('validation')  # type: ignore[attr-defined]
+  config.evals.v2 = get_eval('test', dataset='imagenet_v2')  # type: ignore[attr-defined]
+  config.evals.real = get_eval('validation', dataset='imagenet2012_real')  # type: ignore[attr-defined]
+  config.evals.real.pp_fn = pp_eval.format(lbl='real_label')  # type: ignore[attr-defined]
 
   # config.evals.fewshot = get_fewshot_lsr(runlocal=runlocal)
   # config.evals.fewshot.log_steps = 1000
 
   if runlocal:
-    config.input.batch_size = 32
-    config.input.cache_raw = False
-    config.input.shuffle_buffer_size = 100
+    config.input.batch_size = 32  # type: ignore[attr-defined]
+    config.input.cache_raw = False  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 100  # type: ignore[attr-defined]
 
-    local_eval = config.evals.val
+    local_eval = config.evals.val  # type: ignore[attr-defined]
     config.evals = {'val': local_eval}
-    config.evals.val.cache = 'none'
+    config.evals.val.cache = 'none'  # type: ignore[attr-defined]
 
   return config

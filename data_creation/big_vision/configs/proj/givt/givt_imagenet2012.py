@@ -52,14 +52,14 @@ def get_config(arg=None):
   ### download of ImageNet. This is only meant for testing and will overfit
   ### immediately. Please download ImageNet to reproduce the paper results.
   # config.input.data = dict(name='imagenet2012', split='train[4096:]')
-  config.input.data = dict(name='imagenette', split='train')
+  config.input.data = dict(name='imagenette', split='train')  # type: ignore[attr-defined]
 
-  config.input.batch_size = 8 * 1024 if not arg.runlocal else 8
-  config.input.shuffle_buffer_size = 25_000 if not arg.runlocal else 10
+  config.input.batch_size = 8 * 1024 if not arg.runlocal else 8  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 25_000 if not arg.runlocal else 10  # type: ignore[attr-defined]
 
   config.total_epochs = 500
 
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       f'decode_jpeg_and_inception_crop({arg.res},'
       f'area_min=80, area_max=100, ratio_min=1.0, ratio_max=1.0,'
       f'method="bicubic", antialias=True)'
@@ -103,24 +103,24 @@ def get_config(arg=None):
 
   # VAE section
   config.vae = {}
-  config.vae.model = ml_collections.ConfigDict()
-  config.vae.model.code_len = (arg.res // arg.patch_size) ** 2
-  config.vae.model_name = 'proj.givt.cnn'
-  config.vae.model.codeword_dim = 16
-  config.vae.model.filters = 128
-  config.vae.model.num_res_blocks = 2
-  config.vae.model.channel_multipliers = (1, 1, 2, 2, 4)
-  config.vae.model.conv_downsample = False
-  config.vae.model.activation_fn = 'swish'
-  config.vae.model.norm_type = 'GN'
+  config.vae.model = ml_collections.ConfigDict()  # type: ignore[attr-defined]
+  config.vae.model.code_len = (arg.res // arg.patch_size) ** 2  # type: ignore[attr-defined]
+  config.vae.model_name = 'proj.givt.cnn'  # type: ignore[attr-defined]
+  config.vae.model.codeword_dim = 16  # type: ignore[attr-defined]
+  config.vae.model.filters = 128  # type: ignore[attr-defined]
+  config.vae.model.num_res_blocks = 2  # type: ignore[attr-defined]
+  config.vae.model.channel_multipliers = (1, 1, 2, 2, 4)  # type: ignore[attr-defined]
+  config.vae.model.conv_downsample = False  # type: ignore[attr-defined]
+  config.vae.model.activation_fn = 'swish'  # type: ignore[attr-defined]
+  config.vae.model.norm_type = 'GN'  # type: ignore[attr-defined]
   if arg.model_size == 'large':
-    config.vae.model_init = 'gs://big_vision/givt/vae_imagenet_2012_beta_1e-5_params'
+    config.vae.model_init = 'gs://big_vision/givt/vae_imagenet_2012_beta_1e-5_params'  # type: ignore[attr-defined]
   else:
-    config.vae.model_init = 'gs://big_vision/givt/vae_imagenet_2012_beta_5e-5_params'
-  config.vae.model.malib_ckpt = True
-  config.vae.model_load = {}
-  config.vae.model_load.malib_ckpt = config.vae.model.malib_ckpt
-  config.vae.model_load.use_ema_params = True
+    config.vae.model_init = 'gs://big_vision/givt/vae_imagenet_2012_beta_5e-5_params'  # type: ignore[attr-defined]
+  config.vae.model.malib_ckpt = True  # type: ignore[attr-defined]
+  config.vae.model_load = {}  # type: ignore[attr-defined]
+  config.vae.model_load.malib_ckpt = config.vae.model.malib_ckpt  # type: ignore[attr-defined]
+  config.vae.model_load.use_ema_params = True  # type: ignore[attr-defined]
 
   # GIVT section
   config.model_name = 'proj.givt.givt'
@@ -129,8 +129,8 @@ def get_config(arg=None):
   config.model = ml_collections.ConfigDict(GIVT_MODELS[arg.model_size])
   config.model.num_layers = 0
   config.model.num_labels = 1000  # None
-  config.model.seq_len = config.vae.model.code_len
-  config.model.out_dim = config.vae.model.codeword_dim
+  config.model.seq_len = config.vae.model.code_len  # type: ignore[attr-defined]
+  config.model.out_dim = config.vae.model.codeword_dim  # type: ignore[attr-defined]
   config.model.num_mixtures = 16
   config.model.posemb_type = 'learn'
   config.model.scale_tol = 1e-6
@@ -148,9 +148,9 @@ def get_config(arg=None):
   # Adaptor section
   config.adaptor_name = 'proj.givt.adaptor' if arg.adaptor else ''
   config.adaptor = {}
-  config.adaptor.model = ml_collections.ConfigDict()
-  config.adaptor.model.num_blocks = 8
-  config.adaptor.model.num_channels_bottleneck = 4 * config.model.out_dim
+  config.adaptor.model = ml_collections.ConfigDict()  # type: ignore[attr-defined]
+  config.adaptor.model.num_blocks = 8  # type: ignore[attr-defined]
+  config.adaptor.model.num_channels_bottleneck = 4 * config.model.out_dim  # type: ignore[attr-defined]
 
   config.optax_name = 'scale_by_adam'
   config.optax = dict(b2=0.95)
@@ -175,34 +175,34 @@ def get_config(arg=None):
   elif arg.res == 512 and arg.model_size == 'large':
     config.model.dec_dropout_rate = 0.1
     # Set up space-to-depth/pixel shuffle
-    config.vae.model.code_len //= 2
-    config.vae.model.pixel_shuffle_patch_size = (1, 2)
+    config.vae.model.code_len //= 2  # type: ignore[attr-defined]
+    config.vae.model.pixel_shuffle_patch_size = (1, 2)  # type: ignore[attr-defined]
     config.model.seq_len //= 2
-    config.model.out_dim = config.vae.model.codeword_dim * 2
+    config.model.out_dim = config.vae.model.codeword_dim * 2  # type: ignore[attr-defined]
     config.model.num_mixtures = 32
-    config.adaptor.model.num_channels_bottleneck = 8 * config.model.out_dim
-    config.adaptor.model.pixel_shuffle_patch_size = (1, 2)
+    config.adaptor.model.num_channels_bottleneck = 8 * config.model.out_dim  # type: ignore[attr-defined]
+    config.adaptor.model.pixel_shuffle_patch_size = (1, 2)  # type: ignore[attr-defined]
     # Update sampling config
     config.ar_generation_config.temp = 0.9
     config.ar_generation_config.cfg_inference_weight = 0.9
 
   ### Evaluation section
   config.evals = {}
-  config.evals.val = ml_collections.ConfigDict()
-  config.evals.val.type = 'mean'
-  config.evals.val.pred = 'validation'
-  config.evals.val.data = {**config.input.data}
-  config.evals.val.data.split = f'train[:{4096 if not arg.runlocal else 8}]'
-  config.evals.val.pp_fn = pp_eval
-  config.evals.val.log_steps = 1_000 if not arg.runlocal else 20
+  config.evals.val = ml_collections.ConfigDict()  # type: ignore[attr-defined]
+  config.evals.val.type = 'mean'  # type: ignore[attr-defined]
+  config.evals.val.pred = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.data = {**config.input.data}  # type: ignore[attr-defined]
+  config.evals.val.data.split = f'train[:{4096 if not arg.runlocal else 8}]'  # type: ignore[attr-defined]
+  config.evals.val.pp_fn = pp_eval  # type: ignore[attr-defined]
+  config.evals.val.log_steps = 1_000 if not arg.runlocal else 20  # type: ignore[attr-defined]
 
-  config.evals.save_pred_sampling = dict(
+  config.evals.save_pred_sampling = dict(  # type: ignore[attr-defined]
       type='proj.givt.save_predictions',
       pp_fn=pp_eval,
       log_steps=10_000,
       pred='sample',
       batch_size=512,
-      data=dict(name=config.input.data.name, split='validation[:512]'),
+      data=dict(name=config.input.data.name, split='validation[:512]'),  # type: ignore[attr-defined]
       outfile='inference_sampled.npz',
   )
 
@@ -211,12 +211,12 @@ def get_config(arg=None):
   config.ckpt_timeout = 30
 
   if arg.runlocal:
-    config.input.batch_size = 4
-    config.input.shuffle_buffer_size = 10
+    config.input.batch_size = 4  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
     config.log_training_steps = 5
     config.model.num_decoder_layers = 2
 
-    config.evals.val.data.split = 'validation[:16]'
-    config.evals.val.log_steps = 20
+    config.evals.val.data.split = 'validation[:16]'  # type: ignore[attr-defined]
+    config.evals.val.log_steps = 20  # type: ignore[attr-defined]
 
   return config

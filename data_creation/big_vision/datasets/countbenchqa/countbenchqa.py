@@ -144,7 +144,7 @@ class CountbenchQA(tfds.core.GeneratorBasedBuilder):
       # Some entries have no image.
       if row['image'] is None:
         continue
-      image = np.array(PIL.Image.open(io.BytesIO(row['image']['bytes'])))
+      image = np.array(PIL.Image.open(io.BytesIO(row['image']['bytes'])))  # type: ignore[attr-defined, arg-type]
       if len(image.shape) != 3:
         continue  # Filter out one bad image.
       countbenchqa_dict = {

@@ -39,17 +39,17 @@ def get_config(arg=None):
   c.loss = 'sigmoid_xent'
 
   c.input = dict()
-  c.input.data = dict(
+  c.input.data = dict(  # type: ignore[attr-defined]
       name='imagenet21k',
       split='full[51200:]',
   )
-  c.input.batch_size = 4096 if not c.runlocal else 8
-  c.input.shuffle_buffer_size = 250_000 if not c.runlocal else 25
+  c.input.batch_size = 4096 if not c.runlocal else 8  # type: ignore[attr-defined]
+  c.input.shuffle_buffer_size = 250_000 if not c.runlocal else 25  # type: ignore[attr-defined]
 
   pp_common = '|value_range(-1, 1)|onehot({onehot_args})|keep("image", "labels")'
   pp_common_i21k = pp_common.format(onehot_args=f'{c.num_classes}')
   pp_common_i1k = pp_common.format(onehot_args='1000, key="{lbl}", key_result="labels"')
-  c.input.pp = f'decode_jpeg_and_inception_crop({c.res})|flip_lr|randaug(2,10)' + pp_common_i21k
+  c.input.pp = f'decode_jpeg_and_inception_crop({c.res})|flip_lr|randaug(2,10)' + pp_common_i21k  # type: ignore[attr-defined]
   def pp_eval(res=c.res):
     return f'decode|resize_small({res//7*8})|central_crop({res})'
 
@@ -59,7 +59,7 @@ def get_config(arg=None):
   # Aggressive pre-fetching because our models here are small, so we not only
   # can afford it, but we also need it for the smallest models to not be
   # bottle-necked by the input pipeline. Play around with it for -L models tho.
-  c.input.prefetch = 8
+  c.input.prefetch = 8  # type: ignore[attr-defined]
   c.prefetch_to_device = 4
 
   c.log_training_steps = 50
@@ -79,7 +79,7 @@ def get_config(arg=None):
 
   # Define the model parameters which are flexible:
   c.flexi = dict()
-  c.flexi.seqhw = dict(
+  c.flexi.seqhw = dict(  # type: ignore[attr-defined]
       # The settings to sample from. Corresponding patch-sizes at 240px:
       # 48, 40, 30, 24, 20, 16, 15, 12, 10, 8
       v=(5, 6, 8, 10, 12, 15, 16, 20, 24, 30),
@@ -115,7 +115,7 @@ def get_config(arg=None):
     )
 
   c.evals = {}
-  for s in c.flexi.seqhw.v:
+  for s in c.flexi.seqhw.v:  # type: ignore[attr-defined]
     c.evals[f'test{s:02d}'] = eval_i21k(s, 'full[:25_600]')
     c.evals[f'val{s:02d}'] = eval_i21k(s, 'full[25_600:51_200]')
     c.evals[f'train{s:02d}'] = eval_i21k(s, 'full[51_200:76_800]')
@@ -131,7 +131,7 @@ def get_config(arg=None):
         log_steps=5000,  # Very fast O(seconds) so it's fine to run it often.
         label_mapping=lblmap,
     )
-  for s in c.flexi.seqhw.v:
+  for s in c.flexi.seqhw.v:  # type: ignore[attr-defined]
     c.evals[f'i1k_val{s:02d}'] = eval_i1k(s, 'imagenet2012', 'validation', 'i1k_i21k')
     c.evals[f'i1k_v2{s:02d}'] = eval_i1k(s, 'imagenet_v2', 'test', 'i1k_i21k')
     c.evals[f'i1k_a{s:02d}'] = eval_i1k(s, 'imagenet_a', 'test', 'i1ka_i21k')

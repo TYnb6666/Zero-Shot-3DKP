@@ -31,14 +31,14 @@ def get_config(arg=None):
   config.total_epochs = 200
 
   config.input = dict()
-  config.input.data = dict(
+  config.input.data = dict(  # type: ignore[attr-defined]
       name='downsampled_imagenet/64x64',
       split='train',
   )
-  config.input.batch_size = 1024
-  config.input.shuffle_buffer_size = 250_000
+  config.input.batch_size = 1024  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 250_000  # type: ignore[attr-defined]
 
-  config.input.pp = 'decode|resize(64)|value_range(-1, 1)|keep("image")'
+  config.input.pp = 'decode|resize(64)|value_range(-1, 1)|keep("image")'  # type: ignore[attr-defined]
   pp_eval = 'decode|resize(64)|value_range(-1, 1)|keep("image")'
 
   config.log_training_steps = 50
@@ -77,18 +77,18 @@ def get_config(arg=None):
   # Eval section
   config.evals = {}
 
-  config.evals.minitrain_bits = dict(
+  config.evals.minitrain_bits = dict(  # type: ignore[attr-defined]
       type='mean',
       pred='loss',
-      data=dict(name=config.input.data.name, split='train[:4096]'),
+      data=dict(name=config.input.data.name, split='train[:4096]'),  # type: ignore[attr-defined]
       pp_fn=pp_eval,
       log_percent=0.05,
       )
 
-  config.evals.val_bits = dict(
+  config.evals.val_bits = dict(  # type: ignore[attr-defined]
       type='mean',
       pred='loss',
-      data=dict(name=config.input.data.name, split='validation'),
+      data=dict(name=config.input.data.name, split='validation'),  # type: ignore[attr-defined]
       pp_fn=pp_eval,
       log_percent=0.05,
       )
@@ -96,12 +96,12 @@ def get_config(arg=None):
   if config.mode == 'runlocal':
     del config.total_epochs
     config.total_steps = 200
-    config.input.shuffle_buffer_size = 10
-    config.input.batch_size = 32
-    config.model.depth = 1
-    config.model.block_depth = 1
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
+    config.input.batch_size = 32  # type: ignore[attr-defined]
+    config.model.depth = 1  # type: ignore[attr-defined]
+    config.model.block_depth = 1  # type: ignore[attr-defined]
 
-    config.evals.val_bits.data.split = 'validation[:16]'
-    config.evals.minitrain_bits.data.split = 'train[:16]'
+    config.evals.val_bits.data.split = 'validation[:16]'  # type: ignore[attr-defined]
+    config.evals.minitrain_bits.data.split = 'train[:16]'  # type: ignore[attr-defined]
 
   return config

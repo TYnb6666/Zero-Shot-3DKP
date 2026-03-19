@@ -157,7 +157,7 @@ def generate(
       "Please provide either labels or batch_size.")
 
   config = config or {}
-  config = dict(config)  # copy
+  config = dict(config)  # copy  # type: ignore[call-overload, arg-type]
 
   # For sampling, we support keep_gt (a bool mask), and gt (ground truth)
   # tokens to use instead of samples.
@@ -243,11 +243,11 @@ def generate(
     return logits, aux["cache"]
 
   init_state = LoopState(
-      cache=cache,
-      sequences=init_sequence,  # (b * nb, s, d)
-      logprobs=init_logprobs,   # (b * nb, s, d)
-      rng=rng,
-      cache_u=cache_u,
+      cache=cache,  # type: ignore[call-overload]
+      sequences=init_sequence,  # (b * nb, s, d)  # type: ignore[call-overload]
+      logprobs=init_logprobs,   # (b * nb, s, d)  # type: ignore[call-overload]
+      rng=rng,  # type: ignore[call-overload]
+      cache_u=cache_u,  # type: ignore[call-overload]
   )
 
   rand_top_k = config.pop("rand_top_k", False)
@@ -291,11 +291,11 @@ def generate(
       sampled_tokens = new_tokens.squeeze(axis=1)
       sequences = state.sequences.at[:, i + 1].set(sampled_tokens)
       return LoopState(
-          cache=cache,
-          rng=rng_local,
-          sequences=sequences,
-          logprobs=state.logprobs,
-          cache_u=cache_u,
+          cache=cache,  # type: ignore[call-overload]
+          rng=rng_local,  # type: ignore[call-overload]
+          sequences=sequences,  # type: ignore[call-overload]
+          logprobs=state.logprobs,  # type: ignore[call-overload]
+          cache_u=cache_u,  # type: ignore[call-overload]
       )
 
     # (b, nb, s, d)
@@ -372,11 +372,11 @@ def generate(
       assert cache_u is None
 
     return LoopState(
-        cache=cache,
-        rng=rng_local,
-        sequences=sequences,
-        logprobs=logprobs,
-        cache_u=cache_u,
+        cache=cache,  # type: ignore[call-overload]
+        rng=rng_local,  # type: ignore[call-overload]
+        sequences=sequences,  # type: ignore[call-overload]
+        logprobs=logprobs,  # type: ignore[call-overload]
+        cache_u=cache_u,  # type: ignore[call-overload]
     )
 
   final_state = lax.fori_loop(0, seq_len, sampling_iteration, init_state)

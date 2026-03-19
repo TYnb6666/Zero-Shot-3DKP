@@ -36,7 +36,7 @@ def get_config(runlocal=False):
   config = ConfigDict()
 
   config.input = {}
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       f'decode|coco_panoptic|concat(["semantics","instances"], "labels")|'
       f'randu("fliplr")|det_fliplr(key="image")|det_fliplr(key="labels")|'
       f'inception_box|crop_box(key="image")|crop_box(key="labels")|'
@@ -57,9 +57,9 @@ def get_config(runlocal=False):
       f'keep("cond_image", "image/id")'  # image/id used for rng seeds.
   )
 
-  config.input.data = dict(name='coco/2017_panoptic', split='train[4096:]')
-  config.input.batch_size = 512
-  config.input.shuffle_buffer_size = 50_000
+  config.input.data = dict(name='coco/2017_panoptic', split='train[4096:]')  # type: ignore[attr-defined]
+  config.input.batch_size = 512  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 50_000  # type: ignore[attr-defined]
 
   config.total_epochs = 200
 
@@ -135,50 +135,50 @@ def get_config(runlocal=False):
 
   # Evaluation section
   config.evals = {}
-  config.evals.val = ConfigDict()
-  config.evals.val.type = 'mean'
-  config.evals.val.pred = 'validation'
-  config.evals.val.data = dict(name=config.input.data.name, split='train[:4096]')
-  config.evals.val.pp_fn = pp_eval
-  config.evals.val.log_steps = 1000
+  config.evals.val = ConfigDict()  # type: ignore[attr-defined]
+  config.evals.val.type = 'mean'  # type: ignore[attr-defined]
+  config.evals.val.pred = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.data = dict(name=config.input.data.name, split='train[:4096]')  # type: ignore[attr-defined]
+  config.evals.val.pp_fn = pp_eval  # type: ignore[attr-defined]
+  config.evals.val.log_steps = 1000  # type: ignore[attr-defined]
 
   config.eval_only = False
 
   base = {
       'type': 'proj.givt.coco_panoptic',
-      'data': {**config.input.data},
+      'data': {**config.input.data},  # type: ignore[attr-defined]
       'pp_fn': pp_predict,
       'log_steps': 10_000,
       'pred': 'sample_panoptic',
       # Filters objects that occupy less than 0.03^2 fraction of all pixels.
       # 'pred_kw': {'min_fraction': 0.03 ** 2},
   }
-  config.evals.coco_panoptic_train = dict(base)
-  config.evals.coco_panoptic_train.data.split = 'train[4096:8192]'
-  config.evals.coco_panoptic_holdout = dict(base)
-  config.evals.coco_panoptic_holdout.data.split = 'train[:4096]'
-  config.evals.coco_panoptic = dict(base)
-  config.evals.coco_panoptic.data.split = 'validation'
+  config.evals.coco_panoptic_train = dict(base)  # type: ignore[attr-defined]
+  config.evals.coco_panoptic_train.data.split = 'train[4096:8192]'  # type: ignore[attr-defined]
+  config.evals.coco_panoptic_holdout = dict(base)  # type: ignore[attr-defined]
+  config.evals.coco_panoptic_holdout.data.split = 'train[:4096]'  # type: ignore[attr-defined]
+  config.evals.coco_panoptic = dict(base)  # type: ignore[attr-defined]
+  config.evals.coco_panoptic.data.split = 'validation'  # type: ignore[attr-defined]
 
-  config.evals.save_pred = dict(type='proj.givt.save_predictions')
-  config.evals.save_pred.pred = 'sample_panoptic'
-  config.evals.save_pred.pp_fn = pp_eval
-  config.evals.save_pred.log_steps = 100_000
-  config.evals.save_pred.data = dict(config.input.data)
-  config.evals.save_pred.data.split = 'validation[:1024]'
-  config.evals.save_pred.outfile = 'inference.npz'
+  config.evals.save_pred = dict(type='proj.givt.save_predictions')  # type: ignore[attr-defined]
+  config.evals.save_pred.pred = 'sample_panoptic'  # type: ignore[attr-defined]
+  config.evals.save_pred.pp_fn = pp_eval  # type: ignore[attr-defined]
+  config.evals.save_pred.log_steps = 100_000  # type: ignore[attr-defined]
+  config.evals.save_pred.data = dict(config.input.data)  # type: ignore[attr-defined]
+  config.evals.save_pred.data.split = 'validation[:1024]'  # type: ignore[attr-defined]
+  config.evals.save_pred.outfile = 'inference.npz'  # type: ignore[attr-defined]
 
   if runlocal:
-    config.input.batch_size = 4
-    config.input.shuffle_buffer_size = 10
-    config.evals.val.data.split = 'train[:16]'
-    config.evals.val.log_steps = 20
+    config.input.batch_size = 4  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
+    config.evals.val.data.split = 'train[:16]'  # type: ignore[attr-defined]
+    config.evals.val.log_steps = 20  # type: ignore[attr-defined]
     config.model.num_layers = 1
     config.model.num_decoder_layers = 1
     del config.model_init
-    config.evals.val.data.split = 'validation[:4]'
-    config.evals.coco_panoptic.data.split = 'validation[:4]'
-    config.evals.save_pred.data.split = 'validation[:4]'
+    config.evals.val.data.split = 'validation[:4]'  # type: ignore[attr-defined]
+    config.evals.coco_panoptic.data.split = 'validation[:4]'  # type: ignore[attr-defined]
+    config.evals.save_pred.data.split = 'validation[:4]'  # type: ignore[attr-defined]
     for k in config.evals.keys():
       if k not in ['val', 'coco_panoptic', 'save_pred']:
         del config.evals[k]

@@ -9,7 +9,7 @@ import torch
 from einops import einsum, einops
 from transformers import PreTrainedModel, GenerationConfig, GenerationMixin
 from transformers.cache_utils import Cache
-from transformers.modeling_outputs import CausalLMOutputWithPast, ModelOutput
+from transformers.modeling_outputs import CausalLMOutputWithPast, ModelOutput  # type: ignore[attr-defined]
 from transformers.models.auto import AutoModelForCausalLM
 from torch import nn
 
@@ -213,18 +213,18 @@ class MolmoBlock(nn.Module):
         if config.attention_layer_norm:
             assert config.effective_n_kv_heads is not None
             self.k_norm = LayerNormBase.build(
-                config,
+                config,  # type: ignore[arg-type]
                 size=(config.d_model // config.n_heads) * config.effective_n_kv_heads,
                 elementwise_affine=config.attention_layer_norm_with_affine,
             )
-            self.q_norm = LayerNormBase.build(config, elementwise_affine=config.attention_layer_norm_with_affine)
+            self.q_norm = LayerNormBase.build(config, elementwise_affine=config.attention_layer_norm_with_affine)  # type: ignore[arg-type]
 
         # Make sure QKV clip coefficient is positive, otherwise it's not well-defined.
         if config.clip_qkv is not None:
             assert config.clip_qkv > 0
 
         # Activation function.
-        self.act = Activation.build(config)
+        self.act = Activation.build(config)  # type: ignore[arg-type]
         assert (self.act.output_multiplier * self.hidden_size) % 1 == 0
 
         # Attention output projection.
@@ -259,18 +259,18 @@ class MolmoBlock(nn.Module):
 
     def reset_parameters(self):
         if self.k_norm is not None:
-            self.k_norm.reset_parameters()
+            self.k_norm.reset_parameters()  # type: ignore[operator]
         if self.q_norm is not None:
-            self.q_norm.reset_parameters()
+            self.q_norm.reset_parameters()  # type: ignore[operator]
         init_weights(
-            self.config,
+            self.config,  # type: ignore[arg-type]
             self.attn_out,
             d=self.config.d_model,
             layer_id=self.layer_id,
             type_of_module=ModuleType.out_module,
         )
         init_weights(
-            self.config,
+            self.config,  # type: ignore[arg-type]
             self.ff_out,
             d=self.ff_out.in_features,
             layer_id=self.layer_id,
@@ -414,7 +414,7 @@ class MolmoBlock(nn.Module):
         raise NotImplementedError
 
     @classmethod
-    def build(cls, layer_id: int, config: MolmoConfig, cache: BufferCache):
+    def build(cls, layer_id: int, config: FullMolmoConfig, cache: BufferCache):  # type: ignore[name-defined]
         return MolmoSequentialBlock(layer_id, config, cache)
 
 
@@ -427,8 +427,8 @@ class MolmoSequentialBlock(MolmoBlock):
     def __init__(self, layer_id: int, config: MolmoConfig, cache: BufferCache):
         super().__init__(layer_id, config, cache)
         # Layer norms.
-        self.attn_norm = LayerNorm.build(config)
-        self.ff_norm = LayerNorm.build(config)
+        self.attn_norm = LayerNorm.build(config)  # type: ignore[arg-type]
+        self.ff_norm = LayerNorm.build(config)  # type: ignore[arg-type]
         # Attention input projection. Projects x -> (q, k, v)
 
         head_dim = config.d_model // config.n_heads
@@ -449,14 +449,14 @@ class MolmoSequentialBlock(MolmoBlock):
 
     def reset_parameters(self):
         super().reset_parameters()
-        self.attn_norm.reset_parameters()
-        self.ff_norm.reset_parameters()
+        self.attn_norm.reset_parameters()  # type: ignore[operator]
+        self.ff_norm.reset_parameters()  # type: ignore[operator]
         # NOTE: the standard deviation for these weights does not depend on the layer.
         init_weights(
-            self.config, self.att_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module
+            self.config, self.att_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module  # type: ignore[arg-type]
         )
         init_weights(
-            self.config, self.ff_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module
+            self.config, self.ff_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module  # type: ignore[arg-type]
         )
 
     def forward(
@@ -591,7 +591,7 @@ class Dropout(nn.Dropout):
                 keep = input.new_empty(dropout_shape).bernoulli_(keep_prob)
                 multiplier = keep.broadcast_to(input.shape)
                 multiplier.div_(keep_prob)
-                input = input * multiplier
+                return input * multiplier
             else:
                 return F.dropout(input, self.p, self.training, self.inplace)
 
@@ -711,7 +711,7 @@ class FullMolmoConfig:
     @property
     def image_patch_size(self):
         assert self.vision_backbone is not None
-        return self.visoin_backbone.image_patch_size
+        return self.vision_backbone.image_patch_size
 
     def llm_patches_per_crop(self):
         h, w = self.image_num_patch
@@ -808,7 +808,7 @@ class BlockCollection(nn.Module):
 
     def reset_parameters(self):
         for r in self.resblocks:
-            r.reset_parameters()
+            r.reset_parameters()  # type: ignore[operator]
 
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
         hidden_states = []
@@ -858,7 +858,7 @@ class VisionTransformer(nn.Module):
 
         self.transformer = BlockCollection(config)
 
-    @torch.jit.ignore
+    @torch.jit.ignore  # type: ignore[misc]
     def set_grad_checkpointing(self, enable=True):
         self.transformer.grad_checkpointing = enable
 
@@ -869,7 +869,7 @@ class VisionTransformer(nn.Module):
         self.pre_ln.reset_parameters()
         self.transformer.reset_parameters()
 
-    def add_pos_emb(self, x: torch.Tensor, patch_num: int) -> torch.Tensor:
+    def add_pos_emb(self, x: torch.Tensor, patch_num: Tuple[int, int]) -> torch.Tensor:
         cls_emb = self.positional_embedding[0:1]
         pos_emb = self.positional_embedding[1:]
 
@@ -892,7 +892,7 @@ class VisionTransformer(nn.Module):
         x = x + torch.cat([cls_emb[None, :, :], pos_emb[None, :, :]], dim=1).to(x.dtype)
         return x
 
-    def forward(self, x: torch.Tensor, patch_num: int = None) -> List[torch.Tensor]:
+    def forward(self, x: torch.Tensor, patch_num: Optional[Tuple[int, int]] = None) -> List[torch.Tensor]:
         """
         : param x: (batch_size, num_patch, n_pixels)
         """
@@ -1216,7 +1216,7 @@ class Residual(nn.Module):
         self.submodule = submodule
 
     def reset_parameters(self):
-        self.submodule.reset_parameters()
+        self.submodule.reset_parameters()  # type: ignore[operator]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x + self.submodule(x)
@@ -1228,8 +1228,8 @@ class OLMoVisionBackbone(nn.Module):
         self.config = config
         self.image_vit = VisionTransformer(config)
 
-        input_dim: int = None
-        self.image_pooling_2d: nn.Module = None
+        input_dim: Optional[int] = None
+        self.image_pooling_2d: Optional[nn.Module] = None
         if config.image_pooling_2d in {ImagePooling2DType.attention, ImagePooling2DType.attention_meanq}:
             self.image_pooling_2d = MultiHeadDotProductAttention(config, is_vit_layer=False)
             input_dim = config.vision_backbone.image_emb_dim
@@ -1294,14 +1294,14 @@ class OLMoVisionBackbone(nn.Module):
 
     def reset_parameters(self):
         if self.image_pooling_2d is not None:
-            self.image_pooling_2d.reset_parameters()
+            self.image_pooling_2d.reset_parameters()  # type: ignore[operator]
         if self.config.image_projector == "2mlp":
-            for module in self.image_projector:
+            for module in self.image_projector:  # type: ignore[union-attr]
                 module.reset_parameters()
         elif self.config.image_projector == "linear":
-            nn.init.xavier_uniform_(self.image_projector.weight)
+            nn.init.xavier_uniform_(self.image_projector.weight)  # type: ignore[arg-type]
         else:
-            self.image_projector.reset_parameters()
+            self.image_projector.reset_parameters()  # type: ignore[operator]
 
     def forward(self, images: torch.Tensor, image_masks: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         raise NotImplementedError
@@ -1332,7 +1332,7 @@ class OLMoPretrainedVisionBackbone(OLMoVisionBackbone):
         super().reset_parameters()
         self.image_vit.reset_parameters()
 
-    def encode_image(self, images: torch.Tensor) -> torch.Tensor:
+    def encode_image(self, images: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """
         : param images: (batch_size, num_crops, num_patch, n_pixels)
         """
@@ -1355,7 +1355,7 @@ class OLMoPretrainedVisionBackbone(OLMoVisionBackbone):
         else:
             image_features = image_features[-1]
 
-        cls_embed: torch.Tensor = None
+        cls_embed: Optional[torch.Tensor] = None
         if self.num_prefix_tokens > 0:
             cls_embed = image_features[:, 0]
             image_features = image_features[:, 1:]
@@ -1376,6 +1376,7 @@ class OLMoPretrainedVisionBackbone(OLMoVisionBackbone):
 
         if cfg.image_padding_embed:
             assert image_masks is not None
+            assert self.pad_embed is not None
             if cfg.image_padding_embed == "pad_embed":
                 all_pad = (image_masks == 0).to(dtype=torch.float32)
                 pad_embed = self.pad_embed[None, None, None, :]
@@ -1418,8 +1419,10 @@ class OLMoPretrainedVisionBackbone(OLMoVisionBackbone):
 
         if cfg.image_pooling_2d == ImagePooling2DType.attention_meanq:
             query = image_features.mean(-2, keepdim=True)
+            assert self.image_pooling_2d is not None
             image_features = self.image_pooling_2d(query, image_features)
         elif cfg.image_pooling_2d not in {ImagePooling2DType.none, ImagePooling2DType.stack}:
+            assert self.image_pooling_2d is not None
             if self.grad_checkpointing:
                 from torch.utils.checkpoint import checkpoint
                 image_features = checkpoint(self.image_pooling_2d, image_features[:, :1, :], image_features, use_reentrant=False)
@@ -1438,7 +1441,7 @@ class OLMoPretrainedVisionBackbone(OLMoVisionBackbone):
 
         # image_features: (batch_size, num_image, num_patch, d_model)
         # cls_embed: (batch_size, num_image, d_model)
-        return image_features, cls_embed
+        return image_features, cls_embed  # type: ignore[return-value]
 
 
 class ModuleType(str, Enum):
@@ -1513,9 +1516,9 @@ class Activation(nn.Module):
         # elif config.activation_type == "llama_geglu_tanh":
         #     return LlamaGEGLUTanh(config)
         elif config.activation_type == "llama_swiglu":
-            return LlamaSwiGLU()
+            return cast(Activation, LlamaSwiGLU())
         elif config.activation_type == "swiglu":
-            return SwiGLU()
+            return cast(Activation, SwiGLU())
         else:
             raise NotImplementedError(f"Unknown activation: '{config.activation_type}'")
 
@@ -1571,7 +1574,7 @@ def get_causal_attention_bias(cache: BufferCache, seq_len: int, device: torch.de
 class LayerNormBase(nn.Module):
     def __init__(
         self,
-        config: MolmoConfig,
+        config: FullMolmoConfig,
         *,
         size: Optional[int] = None,
         elementwise_affine: Optional[bool] = True,
@@ -1584,11 +1587,13 @@ class LayerNormBase(nn.Module):
         self.eps = self.config.layer_norm_eps or eps
         self.normalized_shape = (size or config.d_model,)
         if elementwise_affine or (elementwise_affine is None and self.config.layer_norm_with_affine):
+            assert weight_initializer is not None
             self.weight = nn.Parameter(weight_initializer(self.normalized_shape, device=config.init_device))
             use_bias = self.config.bias_for_layer_norm
             if use_bias is None:
                 use_bias = self.config.include_bias
             if use_bias:
+                assert bias_initializer is not None
                 self.bias = nn.Parameter(bias_initializer(self.normalized_shape, device=config.init_device))
             else:
                 self.register_parameter("bias", None)
@@ -1658,11 +1663,11 @@ class LayerNorm(LayerNormBase):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.low_precision:
             module_device = x.device
-            downcast_x = self._cast_if_autocast_enabled(x)
+            downcast_x = self._cast_if_autocast_enabled(x)  # type: ignore[operator]
             downcast_weight = (
-                self._cast_if_autocast_enabled(self.weight) if self.weight is not None else self.weight
+                self._cast_if_autocast_enabled(self.weight) if self.weight is not None else self.weight  # type: ignore[operator]
             )
-            downcast_bias = self._cast_if_autocast_enabled(self.bias) if self.bias is not None else self.bias
+            downcast_bias = self._cast_if_autocast_enabled(self.bias) if self.bias is not None else self.bias  # type: ignore[operator]
             with torch.autocast(enabled=False, device_type=module_device.type):
                 return F.layer_norm(
                     downcast_x, self.normalized_shape, weight=downcast_weight, bias=downcast_bias, eps=self.eps
@@ -1694,9 +1699,9 @@ class Molmo(nn.Module):
         if self.config.additional_vocab_size is not None:
             wte = Embedding(
                 config.embedding_size or config.vocab_size,
-                config.additional_vocab_size,
+                config.additional_vocab_size,  # type: ignore[arg-type]
                 config.d_model,
-                device=config.init_device,
+                device=config.init_device,  # type: ignore[arg-type]
                 initializer_range=config.initializer_range,
                 new_embed_initializer_range=config.new_embedding_init_range
             )
@@ -1747,23 +1752,23 @@ class Molmo(nn.Module):
         self.reset_non_vision_parameters()
 
     def reset_non_vision_parameters(self):
-        self.transformer.wte.reset_parameters()
+        self.transformer.wte.reset_parameters()  # type: ignore[operator]
         if hasattr(self.transformer.wte, "new_embedding"):
-            nn.init.normal_(self.transformer.wte.new_embedding, std=self.config.new_embedding_init_range)
+            nn.init.normal_(self.transformer.wte.new_embedding, std=self.config.new_embedding_init_range)  # type: ignore[arg-type]
 
         if hasattr(self.transformer, "wpe"):
-            nn.init.normal_(self.transformer.wpe, mean=0.0, std=1.0)
+            nn.init.normal_(self.transformer.wpe, mean=0.0, std=1.0)  # type: ignore[arg-type]
 
-        self.transformer.ln_f.reset_parameters()  # type: ignore
+        self.transformer.ln_f.reset_parameters()  # type: ignore[operator]
 
         if hasattr(self.transformer, "ff_out"):
-            nn.init.normal_(self.transformer.ff_out, mean=0.0, std=0.02)
+            nn.init.normal_(self.transformer.ff_out, mean=0.0, std=0.02)  # type: ignore[arg-type]
 
         if self.config.block_group_size == 1:
-            for block in self.transformer.blocks:
+            for block in self.transformer.blocks:  # type: ignore[union-attr]
                 block.reset_parameters()
         else:
-            for block_group in self.transformer.block_groups:
+            for block_group in self.transformer.block_groups:  # type: ignore[union-attr]
                 block_group.reset_parameters()
 
 
@@ -1857,13 +1862,14 @@ class Molmo(nn.Module):
         # Get embeddings of input.
         # shape: (batch_size, seq_len, d_model)
         if input_ids is not None:
-            input_ids = input_ids * (input_ids != -1).to(input_ids.dtype)
+            input_ids = input_ids * (input_ids != -1).to(input_ids.dtype)  # type: ignore[assignment]
         x = self.transformer.wte(input_ids) if input_embeddings is None else input_embeddings  # type: ignore
 
         num_image: Optional[int] = None
         if images is not None:
             # shape: (batch_size, num_image, num_patch, d_model)
             # cls_embed: (batch_size, num_image, d_model)
+            assert self.vision_backbone is not None
             image_features, cls_embed = self.vision_backbone(images, image_masks)
             num_image, num_patch = image_features.shape[1:3]
             assert image_input_idx.shape == (batch_size, num_image, num_patch)
@@ -1945,7 +1951,7 @@ class Molmo(nn.Module):
 
         # Apply blocks one-by-one.
         if self.config.block_group_size == 1:
-            for block_idx, block in enumerate(self.transformer.blocks):
+            for block_idx, block in enumerate(self.transformer.blocks):  # type: ignore[arg-type]
                 if output_hidden_states:
                     # add hidden states
                     all_hidden_states.append(x)
@@ -1957,7 +1963,7 @@ class Molmo(nn.Module):
                     assert cache is not None
                     attn_key_values.append(cache)
         else:
-            for group_idx, block_group in enumerate(self.transformer.block_groups):
+            for group_idx, block_group in enumerate(self.transformer.block_groups):  # type: ignore[arg-type]
                 if output_hidden_states:
                     # add hidden states
                     all_hidden_states.append(x)
@@ -2049,7 +2055,7 @@ class MolmoForCausalLM(GenerationMixin, PreTrainedModel):
                 rope_theta=config.rope_theta,
                 layer_norm_eps=config.layer_norm_eps,
                 layer_norm_type=config.layer_norm_type,
-                vit_layers=[-2, -9],
+                vit_layers=(-2, -9),
                 vision_backbone=VisionBackboneConfig(
                     image_default_input_size=(336, 336),
                     image_patch_size=14,
@@ -2076,7 +2082,7 @@ class MolmoForCausalLM(GenerationMixin, PreTrainedModel):
 
     def forward(
         self,
-        input_ids: torch.LongTensor = None,
+        input_ids: torch.LongTensor = None,  # type: ignore[assignment]
         inputs_embeds: Optional[torch.FloatTensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
         attention_bias: Optional[torch.Tensor] = None,
@@ -2119,24 +2125,24 @@ class MolmoForCausalLM(GenerationMixin, PreTrainedModel):
             image_input_idx=image_input_idx,
             subsegment_ids=subsegment_ids,
             position_ids=position_ids,
-            past_key_values=past_key_values,
-            use_cache=use_cache,
-            last_logits_only=last_logits_only,
+            past_key_values=past_key_values,  # type: ignore[arg-type]
+            use_cache=use_cache,  # type: ignore[arg-type]
+            last_logits_only=last_logits_only,  # type: ignore[arg-type]
             output_hidden_states=output_hidden_states,
             append_last_valid_logits=append_last_valid_logits,
         )
 
-        logits = outputs.logits
-        hidden_states = outputs.hidden_states
+        logits = outputs.logits  # type: ignore[attr-defined]
+        hidden_states = outputs.hidden_states  # type: ignore[attr-defined]
 
         loss = None
         if labels is not None:
             if loss_masks is not None:
                 loss_masks = loss_masks * (loss_masks > 0)
                 batch_size_in_tokens = max(loss_masks.sum().item(), 1)
-                labels = labels.long()
+                labels = labels.long()  # type: ignore[assignment]
                 labels.masked_fill_(~(loss_masks > 0), -100)
-                labels = labels.view(-1)
+                labels = labels.view(-1)  # type: ignore[assignment]
                 logits_for_loss = logits.to(torch.float32).view(-1, logits.size(-1))
                 loss_fct = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction='none')
                 loss = loss_fct(logits_for_loss, labels)
@@ -2170,7 +2176,7 @@ class MolmoForCausalLM(GenerationMixin, PreTrainedModel):
         return CausalLMOutputWithPast(
             loss=loss,
             logits=logits,
-            past_key_values=outputs.attn_key_values,
+            past_key_values=outputs.attn_key_values,  # type: ignore[attr-defined]
             hidden_states=hidden_states,
         )
 
@@ -2233,7 +2239,7 @@ class MolmoForCausalLM(GenerationMixin, PreTrainedModel):
     ):
         if past_key_values:
             # This is because we want the model to only process the last generated token.
-            input_ids = input_ids[:, -1:]
+            input_ids = input_ids[:, -1:]  # type: ignore[assignment]
 
         if self.config.use_position_ids:
             attention_mask = kwargs.get("attention_mask")
@@ -2278,16 +2284,16 @@ class MolmoForCausalLM(GenerationMixin, PreTrainedModel):
                 del model_kwargs["image_masks"]
                 del model_kwargs["image_input_idx"]
         try:
-            cache_name, cache = super()._extract_past_from_model_output(outputs)
+            cache_name, cache = super()._extract_past_from_model_output(outputs)  # type: ignore[misc]
         except AttributeError:
-            past_key_values = outputs.past_key_values if "past_key_values" in outputs else None
+            past_key_values = outputs.past_key_values if "past_key_values" in outputs else None  # type: ignore[attr-defined]
             cache_name, cache = "past_key_values", past_key_values
         model_kwargs[cache_name] = cache
         model_kwargs["cache_position"] = model_kwargs["cache_position"][-1:] + num_new_tokens
         return model_kwargs
 
     def get_input_embeddings(self) -> torch.nn.Module:
-        return self.model.transformer.wte
+        return self.model.transformer.wte  # type: ignore[return-value]
 
     def set_input_embeddings(self, value: torch.nn.Module):
         self.model.transformer.wte = value
@@ -2351,11 +2357,11 @@ class MolmoForCausalLM(GenerationMixin, PreTrainedModel):
         """
         model_embeds = self._resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         if new_num_tokens is None and pad_to_multiple_of is None:
-            return model_embeds
+            return model_embeds  # type: ignore[return-value]
 
         # Update base model and current model config
-        self.config.embedding_size = model_embeds.weight.shape[0]
-        self.model.config.embedding_size = model_embeds.weight.shape[0]
+        self.config.embedding_size = model_embeds.weight.shape[0]  # type: ignore[index]
+        self.model.config.embedding_size = model_embeds.weight.shape[0]  # type: ignore[index, misc]
 
         # Check if the embedding size is less than the vocab size
         if self.config.embedding_size < self.config.vocab_size:
@@ -2369,6 +2375,6 @@ class MolmoForCausalLM(GenerationMixin, PreTrainedModel):
         # Tie weights again if needed
         self.tie_weights()
 
-        return model_embeds
+        return model_embeds  # type: ignore[return-value]
 
 

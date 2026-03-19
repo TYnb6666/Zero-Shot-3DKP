@@ -76,7 +76,7 @@ class Visualizer(object):
 
 if __name__=='__main__':
     import numpy as np
-    vis = Visualizer(port=35588, env='main')
+    vis = Visualizer(port=35588, env='main')  # type: ignore[arg-type]
     tbl = {"lr": 214, "momentum": 0.9}
     vis.vis_table("test_table", tbl)
     tbl = {"lr": 244444, "momentum": 0.9, "haha": "hoho"}

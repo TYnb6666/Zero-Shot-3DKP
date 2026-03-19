@@ -81,7 +81,7 @@ def get_pp_render_text(image_size: int, font_size: int = 16, max_chars=768,
 
     first = tf.maximum(first - spacing, 0)
     last = tf.maximum(last + spacing, first + min_width)
-    return tf.RaggedTensor.from_tensor(tf.transpose(letter[:, first:last]))
+    return tf.RaggedTensor.from_tensor(tf.transpose(letter[:, first:last]))  # type: ignore[attr-defined]
 
   def to_image(rendered, width, height=None):
     """Makes a nice square image from a long string of rendered charcaters."""
@@ -90,7 +90,7 @@ def get_pp_render_text(image_size: int, font_size: int = 16, max_chars=768,
     row_lengths = tf.cast(tf.cumsum(rendered.row_lengths(1)), tf.float32)
     div = tf.cast(width - max_letter_width, tf.float32)  # For rounding errors.
     row_idx = tf.cast(tf.floor(row_lengths / div), tf.int64)
-    row_idx = tf.RaggedTensor.from_value_rowids(tf.range(tf.shape(rendered)[0]),
+    row_idx = tf.RaggedTensor.from_value_rowids(tf.range(tf.shape(rendered)[0]),  # type: ignore[attr-defined]
                                                 row_idx)
     trimmed = tf.gather(rendered, row_idx, axis=0)
     trimmed = trimmed.merge_dims(1, 2)
@@ -132,14 +132,14 @@ def get_pp_render_text(image_size: int, font_size: int = 16, max_chars=768,
                       "for font size 16; using font size %i might lead to "
                       "suboptimal rendering and might degrade performance.",
                       font_size)
-      letters = tf.image.resize(letters[..., None], (font_size, font_size),
+      letters = tf.image.resize(letters[..., None], (font_size, font_size),  # type: ignore[arg-type]
                                 method=resize_method, antialias=True)
       letters = tf.squeeze(letters, axis=-1)
 
     if monospace:
-      letters = tf.RaggedTensor.from_tensor(tf.transpose(letters, (0, 2, 1)))
+      letters = tf.RaggedTensor.from_tensor(tf.transpose(letters, (0, 2, 1)))  # type: ignore[attr-defined]
     else:
-      letters = tf.RaggedTensor.from_tensor(letters)
+      letters = tf.RaggedTensor.from_tensor(letters)  # type: ignore[attr-defined]
       signature = tf.RaggedTensorSpec(shape=(None, font_size), ragged_rank=1,
                                       dtype=letters.dtype)
       letters = tf.map_fn(trim_letter, letters, fn_output_signature=signature)

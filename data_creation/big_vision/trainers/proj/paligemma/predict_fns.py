@@ -62,7 +62,7 @@ def _image_avg_repr(train_state, batch, *, model, key="img/pre_logits"):
   # At this point, zimg is a (batch of) sequence of image tokens, because we
   # assume the model is a vit with "none" head. This predict-fn is for fewshot
   # evaluator, so we need to turn it into reasonably-sized vector -> avg.
-  zimg = jnp.mean(zimg, axis=range(1, zimg.ndim - 1))
+  zimg = jnp.mean(zimg, axis=range(1, zimg.ndim - 1))  # type: ignore[attr-defined]
   return zimg, out
 
 

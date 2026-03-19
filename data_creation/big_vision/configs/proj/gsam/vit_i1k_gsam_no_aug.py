@@ -97,7 +97,7 @@ def get_config(arg=None):
       rho_min=0.1,
       alpha=0.6,
       lr_max=config.get_ref('lr'),
-      lr_min=config.schedule.get_ref('linear_end') * config.get_ref('lr'),
+      lr_min=config.schedule.get_ref('linear_end') * config.get_ref('lr'),  # type: ignore[attr-defined]
   )
 
   # Eval section
@@ -109,15 +109,15 @@ def get_config(arg=None):
       log_steps=2500,  # Very fast O(seconds) so it's fine to run it often.
   )
   config.evals = {}
-  config.evals.train = {**eval_common, 'split': 'train[:2%]'}
-  config.evals.minival = {**eval_common, 'split': 'train[99%:]'}
-  config.evals.val = {**eval_common, 'split': 'validation'}
-  config.evals.v2 = {**eval_common, 'dataset': 'imagenet_v2', 'split': 'test'}
+  config.evals.train = {**eval_common, 'split': 'train[:2%]'}  # type: ignore[attr-defined]
+  config.evals.minival = {**eval_common, 'split': 'train[99%:]'}  # type: ignore[attr-defined]
+  config.evals.val = {**eval_common, 'split': 'validation'}  # type: ignore[attr-defined]
+  config.evals.v2 = {**eval_common, 'dataset': 'imagenet_v2', 'split': 'test'}  # type: ignore[attr-defined]
 
-  config.evals.real = {**eval_common}
-  config.evals.real.dataset = 'imagenet2012_real'
-  config.evals.real.split = 'validation'
-  config.evals.real.pp_fn = pp.format(lbl='real_label')
+  config.evals.real = {**eval_common}  # type: ignore[attr-defined]
+  config.evals.real.dataset = 'imagenet2012_real'  # type: ignore[attr-defined]
+  config.evals.real.split = 'validation'  # type: ignore[attr-defined]
+  config.evals.real.pp_fn = pp.format(lbl='real_label')  # type: ignore[attr-defined]
 
   config.fewshot = get_fewshot_lsr(runlocal=arg.runlocal)
   config.fewshot.log_steps = 10_000

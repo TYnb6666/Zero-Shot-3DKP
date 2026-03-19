@@ -86,7 +86,7 @@ def prepare_datasets(img_dataset,
     ))
 
   def add_prompts(idx, class_name):
-    return tf.data.Dataset.from_tensor_slices({
+    return tf.data.Dataset.from_tensor_slices({  # type: ignore[arg-type]
         "label": tf.repeat([idx], len(prompt_templates), axis=0),
         "class_name": tf.repeat([class_name], len(prompt_templates), axis=0),
         "prompt_template": prompt_templates,
@@ -105,7 +105,7 @@ def prepare_datasets(img_dataset,
   ds_images = img_dataset.map(
       pp_builder.get_preprocess_fn(f"{pp_img}|keep('label', 'image')"))
   ds_texts = tf.data.Dataset.from_tensor_slices(list(class_names)).enumerate(
-  ).flat_map(expand_aliases).flat_map(add_prompts).map(substitute_prompt).map(
+  ).flat_map(expand_aliases).flat_map(add_prompts).map(substitute_prompt).map(  # type: ignore[arg-type]
       pp_builder.get_preprocess_fn(f"{pp_txt}|keep('label', 'labels')"))
 
   if cache_final:

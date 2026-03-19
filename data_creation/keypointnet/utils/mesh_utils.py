@@ -43,7 +43,7 @@ def find_adjacent_faces(faces, face_idx):
         if face_idx in pair:
             other_face = pair[1] if pair[0] == face_idx else pair[0]
             for i in range(3):
-                if np.all(faces[face_idx, [i, (i + 1) % 3]] == faces[other_face, [(j + 1) % 3, j]] for j in range(3)):
+                if np.all(faces[face_idx, [i, (i + 1) % 3]] == faces[other_face, [(j + 1) % 3, j]] for j in range(3)):  # type: ignore[call-overload, arg-type]
                     adjacent_faces[i] = other_face
 
     return adjacent_faces
@@ -268,7 +268,7 @@ def get_all_visible_pnt_feats(mesh, all_pnts, all_pnt_ids, all_pnt_face_ids, all
     print(f"Computing face n_ring=1 neighborhood. done.")
 
     for i in range(n_views):
-        pnts, pnt_ids, pnt_face_ids, pos = get_per_view_visible_pnts(
+        pnts, pnt_ids, pnt_face_ids, pos = get_per_view_visible_pnts(  # type: ignore[misc]
             mesh, face_neighbors, all_pnts, all_pnt_ids, all_pnt_face_ids, all_views_intersection_pnts[i], all_views_face_ids[i])
         ret2.append([pnts, pnt_ids, pnt_face_ids, pos])
     return ret2

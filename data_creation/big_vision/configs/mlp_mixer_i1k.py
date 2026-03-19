@@ -38,15 +38,15 @@ def get_config(mode=None):
   config.init_head_bias = -6.9
 
   config.input = dict()
-  config.input.data = dict(
+  config.input.data = dict(  # type: ignore[attr-defined]
       name='imagenet2012',
       split='train[:99%]',
   )
-  config.input.batch_size = 4096
-  config.input.cache_raw = True  # Needs up to 120GB of RAM!
-  config.input.shuffle_buffer_size = 250_000
+  config.input.batch_size = 4096  # type: ignore[attr-defined]
+  config.input.cache_raw = True  # Needs up to 120GB of RAM!  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 250_000  # type: ignore[attr-defined]
 
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       'decode_jpeg_and_inception_crop(224)'
       '|flip_lr'
       '|randaug(2,15)'
@@ -73,8 +73,8 @@ def get_config(mode=None):
   # Model section
   config.model_name = 'mlp_mixer'
   config.model = dict()
-  config.model.variant = 'B/16'
-  config.model.stoch_depth = 0.1
+  config.model.variant = 'B/16'  # type: ignore[attr-defined]
+  config.model.stoch_depth = 0.1  # type: ignore[attr-defined]
 
   config.mixup = dict(fold_in=None, p=0.5)
 
@@ -101,19 +101,19 @@ def get_config(mode=None):
         cache_final=mode != 'gpu8',
     )
   config.evals = {}
-  config.evals.train = get_eval('train[:2%]')
-  config.evals.minival = get_eval('train[99%:]')
-  config.evals.val = get_eval('validation')
-  config.evals.v2 = get_eval('test', dataset='imagenet_v2')
-  config.evals.real = get_eval('validation', dataset='imagenet2012_real')
-  config.evals.real.pp_fn = pp_eval.format(lbl='real_label')
+  config.evals.train = get_eval('train[:2%]')  # type: ignore[attr-defined]
+  config.evals.minival = get_eval('train[99%:]')  # type: ignore[attr-defined]
+  config.evals.val = get_eval('validation')  # type: ignore[attr-defined]
+  config.evals.v2 = get_eval('test', dataset='imagenet_v2')  # type: ignore[attr-defined]
+  config.evals.real = get_eval('validation', dataset='imagenet2012_real')  # type: ignore[attr-defined]
+  config.evals.real.pp_fn = pp_eval.format(lbl='real_label')  # type: ignore[attr-defined]
 
   config.fewshot = get_fewshot_lsr()
 
   if mode == 'gpu8':
     config.total_epochs = 60
-    config.input.batch_size = 512
-    config.input.cache_raw = False
+    config.input.batch_size = 512  # type: ignore[attr-defined]
+    config.input.cache_raw = False  # type: ignore[attr-defined]
   if mode == 'regression_test':
     config.total_epochs = 60
 

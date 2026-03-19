@@ -399,31 +399,31 @@ def evaluate(
         from datasets.celeba import CelebA
         dataset = CelebA(split="test", dataset_loc=dataset_loc, align=False)
     elif dataset_name == "cub_aligned":
-        from datasets import cub
+        from datasets import cub  # type: ignore[attr-defined]
         dataset = cub.TestSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "cub_001":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=1)
     elif dataset_name == "cub_002":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=2)
     elif dataset_name == "cub_003":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=3)
     elif dataset_name == "cub_all":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test")
     elif dataset_name == "taichi":
-        from datasets import taichi
+        from datasets import taichi  # type: ignore[attr-defined]
         dataset = taichi.TestSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "human3.6m":
-        from datasets import human36m
+        from datasets import human36m  # type: ignore[attr-defined]
         dataset = human36m.TestSet(data_root=dataset_loc, validation=validation)
     elif dataset_name == "unaligned_human3.6m":
-        from datasets import unaligned_human36m
+        from datasets import unaligned_human36m  # type: ignore[attr-defined]
         dataset = unaligned_human36m.TestSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "deepfashion":
-        from datasets import deepfashion
+        from datasets import deepfashion  # type: ignore[attr-defined]
         dataset = deepfashion.TestSet(data_root=dataset_loc, image_size=512)
     else:
         raise NotImplementedError

@@ -416,7 +416,7 @@ class Model(nn.Module):
     """Encodes input image or embeddings."""
     emb = self.conv(image)
     patch_embeddings = einops.rearrange(emb, "B PH PW E -> B (PH PW) E")
-    encoded, _ = self.encoder(
+    encoded, _ = self.encoder(  # type: ignore[misc]
         patch_embeddings + self.pos_emb_for_encoder, deterministic=not train)
     return encoded
 
@@ -532,7 +532,7 @@ class Model(nn.Module):
         decode=False,
         deterministic=not train)
 
-    logits = logits[:, 1:, ...]  # Remove class label
+    logits = logits[:, 1:, ...]  # Remove class label  # type: ignore[call-overload, arg-type]
     assert logits.shape[:2] == (b, s)
     return logits
 

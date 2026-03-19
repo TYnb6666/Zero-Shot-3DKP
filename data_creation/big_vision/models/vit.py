@@ -49,7 +49,7 @@ def get_posemb(self, typ, seqshape, width, name, dtype=jnp.float32):
     return self.param(name, nn.initializers.normal(stddev=1/np.sqrt(width)),
                       (1, np.prod(seqshape), width), dtype)
   elif typ == "sincos2d":
-    return posemb_sincos_2d(*seqshape, width, dtype=dtype)
+    return posemb_sincos_2d(*seqshape, width, dtype=dtype)  # type: ignore[call-overload]
   else:
     raise ValueError(f"Unknown posemb type: {typ}")
 
@@ -317,7 +317,7 @@ def resample_posemb(old, new):
 
   zoom = (gs_new/gs_old, gs_new/gs_old, 1)
   grid = scipy.ndimage.zoom(grid, zoom, order=1)
-  grid = grid.reshape(1, gs_new*gs_new, -1)
+  grid = grid.reshape(1, gs_new*gs_new, -1)  # type: ignore[attr-defined]
   return grid
 
 

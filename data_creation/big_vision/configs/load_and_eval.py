@@ -42,8 +42,8 @@ def eval_only(config, batch_size, spec_for_init):
   """Set a few configs that turn trainer into (almost) eval-only."""
   config.total_steps = 0
   config.input = {}
-  config.input.batch_size = batch_size
-  config.input.data = dict(name='bv:dummy', spec=spec_for_init)
+  config.input.batch_size = batch_size  # type: ignore[attr-defined]
+  config.input.data = dict(name='bv:dummy', spec=spec_for_init)  # type: ignore[attr-defined]
   config.optax_name = 'identity'
   config.lr = 0.0
 

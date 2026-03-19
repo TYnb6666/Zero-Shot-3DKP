@@ -349,11 +349,11 @@ class MainKeypointRegressor:
             if radius:
                 # Draw circles at the specified points (eyes)
                 if width:
-                    draw.ellipse((x1 - radius, y1 - radius, x1 + radius, y1 + radius), outline=color, width=width)
+                    draw.ellipse((x1 - radius, y1 - radius, x1 + radius, y1 + radius), outline=color, width=width)  # type: ignore[arg-type]
                 else:
-                    draw.ellipse((x1 - radius, y1 - radius, x1 + radius, y1 + radius), fill=color)
+                    draw.ellipse((x1 - radius, y1 - radius, x1 + radius, y1 + radius), fill=color)  # type: ignore[arg-type]
             else:
-                draw.point((x1, y1), fill=color)
+                draw.point((x1, y1), fill=color)  # type: ignore[arg-type]
 
     def main_loop(self):
         args = self.args

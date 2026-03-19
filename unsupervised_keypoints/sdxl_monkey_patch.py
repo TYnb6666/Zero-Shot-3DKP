@@ -163,7 +163,7 @@ def register_attention_control(model, controller):
 
     def register_recr(net_, count, place_in_unet):
         if net_.__class__.__name__ == 'AttnProcessor2_0':
-            net_.__call__ = custom_call(net_, place_in_unet)
+            net_.__call__ = custom_call(net_, place_in_unet)  # type: ignore[call-arg]
             return count + 1
         elif hasattr(net_, 'children'):
             for net__ in net_.children():

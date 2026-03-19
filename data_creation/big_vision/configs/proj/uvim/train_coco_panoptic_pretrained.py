@@ -47,7 +47,7 @@ def get_config(arg=''):
   config = ConfigDict()
 
   config.input = {}
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       f'decode|coco_panoptic|concat(["semantics","instances"], "labels")|'
       f'randu("fliplr")|det_fliplr(key="image")|det_fliplr(key="labels")|'
       f'inception_box|crop_box(key="image")|crop_box(key="labels")|'
@@ -69,9 +69,9 @@ def get_config(arg=''):
       f'keep("image","image_ctx","image/id")'  # image/id used for rng seeds.
   )
 
-  config.input.data = dict(name='coco/2017_panoptic', split='train[4096:]')
-  config.input.batch_size = 512
-  config.input.shuffle_buffer_size = 50_000
+  config.input.data = dict(name='coco/2017_panoptic', split='train[4096:]')  # type: ignore[attr-defined]
+  config.input.batch_size = 512  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 50_000  # type: ignore[attr-defined]
 
   config.total_epochs = 200
 
@@ -129,12 +129,12 @@ def get_config(arg=''):
 
   # Evaluation section
   config.evals = {}
-  config.evals.val = ConfigDict()
-  config.evals.val.type = 'proj.uvim.compute_mean'
-  config.evals.val.pred = 'validation'
-  config.evals.val.data = dict(name=config.input.data.name, split='train[:4096]')
-  config.evals.val.pp_fn = pp_eval
-  config.evals.val.log_steps = 1000
+  config.evals.val = ConfigDict()  # type: ignore[attr-defined]
+  config.evals.val.type = 'proj.uvim.compute_mean'  # type: ignore[attr-defined]
+  config.evals.val.pred = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.data = dict(name=config.input.data.name, split='train[:4096]')  # type: ignore[attr-defined]
+  config.evals.val.pp_fn = pp_eval  # type: ignore[attr-defined]
+  config.evals.val.log_steps = 1000  # type: ignore[attr-defined]
 
   base = {
       'type': 'proj.uvim.coco_panoptic',
@@ -143,9 +143,9 @@ def get_config(arg=''):
       # Filters objects that occupy less than 0.03^2 fraction of all pixels.
       # 'predict_kwargs': {'min_fraction': 0.03 ** 2},
   }
-  config.evals.coco_panoptic_train = dict(**base, split='train[4096:8192]')
-  config.evals.coco_panoptic_holdout = dict(**base, split='train[:4096]')
-  config.evals.coco_panoptic = dict(**base, split='validation')
+  config.evals.coco_panoptic_train = dict(**base, split='train[4096:8192]')  # type: ignore[attr-defined]
+  config.evals.coco_panoptic_holdout = dict(**base, split='train[:4096]')  # type: ignore[attr-defined]
+  config.evals.coco_panoptic = dict(**base, split='validation')  # type: ignore[attr-defined]
 
   # config.evals.save_pred = dict(type='proj.uvim.save_predictions')
   # config.evals.save_pred.pp = pp_eval.replace('decode|', '')
@@ -155,10 +155,10 @@ def get_config(arg=''):
   # config.evals.save_pred.outfile = 'inference.npz'
 
   if arg.singlehost:
-    config.input.batch_size = 32
+    config.input.batch_size = 32  # type: ignore[attr-defined]
     config.num_epochs = 50
   elif arg.runlocal:
-    config.input.batch_size = 4
-    config.input.shuffle_buffer_size = 10
-    config.evals.val.data.split = 'train[:16]'
+    config.input.batch_size = 4  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
+    config.evals.val.data.split = 'train[:16]'  # type: ignore[attr-defined]
   return config

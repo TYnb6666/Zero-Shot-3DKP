@@ -39,16 +39,16 @@ def get_config(arg=None):
   c.loss = 'sigmoid_xent'
 
   c.input = dict()
-  c.input.data = dict(
+  c.input.data = dict(  # type: ignore[attr-defined]
       name='imagenet21k',
       split='full[51200:]',
   )
-  c.input.batch_size = 4096 if not c.runlocal else 8
-  c.input.shuffle_buffer_size = 250_000 if not c.runlocal else 25
+  c.input.batch_size = 4096 if not c.runlocal else 8  # type: ignore[attr-defined]
+  c.input.shuffle_buffer_size = 250_000 if not c.runlocal else 25  # type: ignore[attr-defined]
 
   pp_label_i21k = f'|onehot({c.num_classes})|keep("image", "prof", "labels")'
   pp_label_i1k = '|onehot(1000, key="{lbl}", key_result="labels")|keep("image", "prof", "labels")'
-  c.input.pp = (
+  c.input.pp = (  # type: ignore[attr-defined]
       f'decode|inception_crop|flip_lr|copy("image", "prof")'
       f'|resize({c.res})|value_range(-1, 1)'
       f'|resize(224, outkey="prof")|value_range(-1, 1, key="prof")'
@@ -69,7 +69,7 @@ def get_config(arg=None):
   # Aggressive pre-fetching because our models here are small, so we not only
   # can afford it, but we also need it for the smallest models to not be
   # bottle-necked by the input pipeline. Play around with it for -L models tho.
-  c.input.prefetch = 8
+  c.input.prefetch = 8  # type: ignore[attr-defined]
   c.prefetch_to_device = 4
 
   c.log_training_steps = 50
@@ -88,7 +88,7 @@ def get_config(arg=None):
 
   # Define the model parameters which are flexible:
   c.flexi = dict()
-  c.flexi.seqhw = dict(
+  c.flexi.seqhw = dict(  # type: ignore[attr-defined]
       # The settings to sample from. Corresponding patch-sizes at 240px:
       # 48, 40, 30, 24, 20, 16, 15, 12, 10, 8
       v=(5, 6, 8, 10, 12, 15, 16, 20, 24, 30),
@@ -133,7 +133,7 @@ def get_config(arg=None):
         log_steps=5000,  # Very fast O(seconds) so it's fine to run it often.
     )
 
-  for s in c.flexi.seqhw.v:
+  for s in c.flexi.seqhw.v:  # type: ignore[attr-defined]
     c.evals[f'student_test{s:02d}'] = eval_i21k(s, 'full[:25_600]')
     c.evals[f'student_val{s:02d}'] = eval_i21k(s, 'full[25_600:51_200]')
     c.evals[f'student_minitrain{s:02d}'] = eval_i21k(s, 'full[51_200:76_800]')
@@ -149,7 +149,7 @@ def get_config(arg=None):
         log_steps=5000,  # Very fast O(seconds) so it's fine to run it often.
         label_mapping=lblmap,
     )
-  for s in c.flexi.seqhw.v:
+  for s in c.flexi.seqhw.v:  # type: ignore[attr-defined]
     c.evals[f'student_i1k_val{s:02d}'] = eval_i1k(s, 'imagenet2012', 'validation', 'i1k_i21k')
     c.evals[f'student_i1k_v2{s:02d}'] = eval_i1k(s, 'imagenet_v2', 'test', 'i1k_i21k')
     c.evals[f'student_i1k_a{s:02d}'] = eval_i1k(s, 'imagenet_a', 'test', 'i1ka_i21k')
@@ -172,9 +172,9 @@ def get_config(arg=None):
         log_steps=5000,  # Very fast O(seconds) so it's fine to run it often.
     )
 
-  c.evals.teacher_test = eval_i21k_t('full[:25_600]')
-  c.evals.teacher_val = eval_i21k_t('full[25_600:51_200]')
-  c.evals.teacher_minitrain = eval_i21k_t('full[51_200:76_800]')
+  c.evals.teacher_test = eval_i21k_t('full[:25_600]')  # type: ignore[attr-defined]
+  c.evals.teacher_val = eval_i21k_t('full[25_600:51_200]')  # type: ignore[attr-defined]
+  c.evals.teacher_minitrain = eval_i21k_t('full[51_200:76_800]')  # type: ignore[attr-defined]
 
   # Evaluations on ImageNet1k variants by label-mapping.
   def eval_i1k_t(dataset, split, lblmap):
@@ -187,12 +187,12 @@ def get_config(arg=None):
         log_percent=0.5,  # Teacher is fixed, so eval just for plots.
         label_mapping=lblmap,
     )
-  c.evals.teacher_i1k_val = eval_i1k_t('imagenet2012', 'validation', 'i1k_i21k')
-  c.evals.teacher_i1k_v2 = eval_i1k_t('imagenet_v2', 'test', 'i1k_i21k')
-  c.evals.teacher_i1k_a = eval_i1k_t('imagenet_a', 'test', 'i1ka_i21k')
-  c.evals.teacher_i1k_r = eval_i1k_t('imagenet_r', 'test', 'i1kr_i21k')
-  c.evals.teacher_i1k_real = eval_i1k_t('imagenet2012_real', 'validation', 'i1k_i21k')
-  c.evals.teacher_i1k_real.pp_fn = pp_eval_prof + pp_label_i1k.format(lbl='real_label')
+  c.evals.teacher_i1k_val = eval_i1k_t('imagenet2012', 'validation', 'i1k_i21k')  # type: ignore[attr-defined]
+  c.evals.teacher_i1k_v2 = eval_i1k_t('imagenet_v2', 'test', 'i1k_i21k')  # type: ignore[attr-defined]
+  c.evals.teacher_i1k_a = eval_i1k_t('imagenet_a', 'test', 'i1ka_i21k')  # type: ignore[attr-defined]
+  c.evals.teacher_i1k_r = eval_i1k_t('imagenet_r', 'test', 'i1kr_i21k')  # type: ignore[attr-defined]
+  c.evals.teacher_i1k_real = eval_i1k_t('imagenet2012_real', 'validation', 'i1k_i21k')  # type: ignore[attr-defined]
+  c.evals.teacher_i1k_real.pp_fn = pp_eval_prof + pp_label_i1k.format(lbl='real_label')  # type: ignore[attr-defined]
   # TODO: add objectnet.
 
   ####
@@ -208,7 +208,7 @@ def get_config(arg=None):
         distances=({'kind': 'kl'}, {'kind': 'logsoftmax_euclidean'},
                    {'kind': 'agree', 'k': 1}, {'kind': 'agree', 'k': 5}),
     )
-  for s in c.flexi.seqhw.v:
+  for s in c.flexi.seqhw.v:  # type: ignore[attr-defined]
     c.evals[f'dist_minitrain_{s:02d}'] = get_dist('full[51_200:76_800]', s)
     c.evals[f'dist_val_{s:02d}'] = get_dist('full[25_600:51_200]', s)
 

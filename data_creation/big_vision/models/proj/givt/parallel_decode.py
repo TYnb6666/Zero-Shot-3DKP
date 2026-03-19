@@ -130,7 +130,7 @@ class DecodeState:
         (num_steps + 1, b, seq_len, c),
     )
     return cls(
-        initial_rng,
+        initial_rng,  # type: ignore[call-overload]
         step=jnp.array(0),
         all_inputs_q=all_inputs_q,
         uncovered_per_step=jnp.full((num_steps, b, seq_len), False, jnp.bool_),
@@ -169,7 +169,7 @@ class DecodeState:
   def split_rng(self) -> tuple["DecodeState", jax.Array]:
     """Splits of RNG for the current step."""
     rng, step_rng = jax.random.split(self.rng, 2)
-    return self.replace(rng=rng), step_rng
+    return self.replace(rng=rng), step_rng  # type: ignore[attr-defined]
 
   def set_next_input(self, next_input_q: jax.Array) -> "DecodeState":
     """Sets the input for the next step."""
@@ -199,7 +199,7 @@ class DecodeState:
 
   def increment_step(self) -> "DecodeState":
     """Increments step."""
-    return self.replace(step=self.step + 1)
+    return self.replace(step=self.step + 1)  # type: ignore[attr-defined]
 
   def _set_row(self, attr_name, row_index, row_value):
     """Sets one row of the variables that have shape (num_steps, ...)."""
@@ -210,7 +210,7 @@ class DecodeState:
     if row_value.dtype != current_value.dtype:
       raise ValueError(f"Expected {row_value.dtype} == {current_value.dtype}")
     new_value = current_value.at[row_index, ...].set(row_value)
-    return self.replace(**{attr_name: new_value})
+    return self.replace(**{attr_name: new_value})  # type: ignore[attr-defined]
 
 
 @dataclasses.dataclass(frozen=True)

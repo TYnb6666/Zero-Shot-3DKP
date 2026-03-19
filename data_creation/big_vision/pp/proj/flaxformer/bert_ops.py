@@ -45,7 +45,7 @@ def _create_bert_tokenizer(vocab_path):
 
 
 @Registry.register("preprocess_ops.bert_tokenize")
-@utils.InKeyOutKey(indefault=None, outdefault="labels")
+@utils.InKeyOutKey(indefault=None, outdefault="labels")  # type: ignore[arg-type]
 def get_pp_bert_tokenize(vocab_path, max_len, sample_if_multi=True):
   """Extracts tokens with tensorflow_text.BertTokenizer.
 

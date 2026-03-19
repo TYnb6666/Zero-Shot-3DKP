@@ -16,12 +16,7 @@
     "**/results/**",
     "**/checkpoints/**",
     "**/runs/**",
-    "**/numbers/**",
-    "data_creation/**",
-    "molmo/**",
-    "unsupervised_keypoints/**",
-    "ULIP/**",
-    "clip_dinoiser/**"
+    "**/numbers/**"
   ],
   "pythonVersion": "3.13",
   "pythonPlatform": "Linux",

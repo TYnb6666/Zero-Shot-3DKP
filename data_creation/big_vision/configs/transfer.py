@@ -137,16 +137,16 @@ def _set_imagenet_variants(config, h_res=448, l_res=384):
   # NOTE: keep test == val for convenience in subsequent analysis.
 
   config.evals.real = dict(type='classification')
-  config.evals.real.data = dict(name='imagenet2012_real', split='validation')
-  config.evals.real.pp_fn = pp.format(lbl='real_label')
-  config.evals.real.loss_name = config.loss
-  config.evals.real.log_steps = 100
+  config.evals.real.data = dict(name='imagenet2012_real', split='validation')  # type: ignore[attr-defined]
+  config.evals.real.pp_fn = pp.format(lbl='real_label')  # type: ignore[attr-defined]
+  config.evals.real.loss_name = config.loss  # type: ignore[attr-defined]
+  config.evals.real.log_steps = 100  # type: ignore[attr-defined]
 
   config.evals.v2 = dict(type='classification')
-  config.evals.v2.data = dict(name='imagenet_v2', split='test')
-  config.evals.v2.pp_fn = pp.format(lbl='label')
-  config.evals.v2.loss_name = config.loss
-  config.evals.v2.log_steps = 100
+  config.evals.v2.data = dict(name='imagenet_v2', split='test')  # type: ignore[attr-defined]
+  config.evals.v2.pp_fn = pp.format(lbl='label')  # type: ignore[attr-defined]
+  config.evals.v2.loss_name = config.loss  # type: ignore[attr-defined]
+  config.evals.v2.log_steps = 100  # type: ignore[attr-defined]
 
 
 def get_config(arg=None):
@@ -157,8 +157,8 @@ def get_config(arg=None):
   config = mlc.ConfigDict()
 
   config.input = {}
-  config.input.batch_size = arg.batch_size if not arg.runlocal else 8
-  config.input.shuffle_buffer_size = 50_000 if not arg.runlocal else 100
+  config.input.batch_size = arg.batch_size if not arg.runlocal else 8  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 50_000 if not arg.runlocal else 100  # type: ignore[attr-defined]
 
   config.log_training_steps = 10
   config.ckpt_steps = 1000

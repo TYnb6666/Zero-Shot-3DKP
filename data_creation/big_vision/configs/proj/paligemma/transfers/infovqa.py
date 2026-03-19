@@ -132,8 +132,8 @@ def get_config(arg=None):
   # Model section.
   c.model_name = 'proj.paligemma.paligemma'
   c.model = {}
-  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)
-  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)
+  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)  # type: ignore[attr-defined]
+  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)  # type: ignore[attr-defined]
   c.model_init = f'pt_{c.res}'
 
   # FSDP strategy.

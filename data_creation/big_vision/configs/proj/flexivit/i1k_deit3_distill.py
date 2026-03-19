@@ -47,13 +47,13 @@ def get_config(arg=None):
   c.loss = 'softmax_xent'
 
   c.input = {}
-  c.input.data = dict(
+  c.input.data = dict(  # type: ignore[attr-defined]
       name='imagenet2012',
       split='train[:99%]',
   )
-  c.input.batch_size = 1024 if not c.runlocal else 8
-  c.input.cache_raw = False  # Needs up to 120GB of RAM!
-  c.input.shuffle_buffer_size = 250_000 if not c.runlocal else 10
+  c.input.batch_size = 1024 if not c.runlocal else 8  # type: ignore[attr-defined]
+  c.input.cache_raw = False  # Needs up to 120GB of RAM!  # type: ignore[attr-defined]
+  c.input.shuffle_buffer_size = 250_000 if not c.runlocal else 10  # type: ignore[attr-defined]
 
   c.log_training_steps = 50
   c.ckpt_steps = 1000
@@ -71,7 +71,7 @@ def get_config(arg=None):
   c.prof = dict(variant=c.get_ref('variant'), pool_type='tok', patch_size=(16, 16))
 
   pp_label = '|onehot(1000, key="{lbl}", key_result="labels")|keep("image", "prof", "labels")'
-  c.input.pp = (
+  c.input.pp = (  # type: ignore[attr-defined]
       f'decode|inception_crop|flip_lr'
       '|copy("image", "prof")'
       f'|resize({c.res})|value_range'
@@ -107,7 +107,7 @@ def get_config(arg=None):
 
   # Define the model parameters which are flexible:
   c.flexi = dict()
-  c.flexi.seqhw = dict(
+  c.flexi.seqhw = dict(  # type: ignore[attr-defined]
       # The settings to sample from. Corresponding patch-sizes at 240px:
       # 48, 40, 30, 24, 20, 16, 15, 12, 10, 8
       v=(5, 6, 8, 10, 12, 15, 16, 20, 24, 30),
@@ -139,7 +139,7 @@ def get_config(arg=None):
     )
 
   c.evals = {}
-  for s in c.flexi.seqhw.v:
+  for s in c.flexi.seqhw.v:  # type: ignore[attr-defined]
     c.evals[f'student_minitrain_{s:02d}'] = get_eval(s, minitrain_split)
     c.evals[f'student_minival_{s:02d}'] = get_eval(s, minival_split)
     c.evals[f'student_val_{s:02d}'] = get_eval(s, val_split)
@@ -159,14 +159,14 @@ def get_config(arg=None):
         log_percent=0.5,  # Teacher is fixed, so eval just for plots.
         cache_final=False,
     )
-  c.evals.teacher_minitrain = get_eval_t(minitrain_split)
-  c.evals.teacher_minival = get_eval_t(minival_split)
-  c.evals.teacher_val = get_eval_t(val_split)
-  c.evals.teacher_v2 = get_eval_t(test_split, 'imagenet_v2')
-  c.evals.teacher_a = get_eval_t(test_split, 'imagenet_a')
-  c.evals.teacher_r = get_eval_t(test_split, 'imagenet_r')
-  c.evals.teacher_real = get_eval_t(val_split, 'imagenet2012_real')
-  c.evals.teacher_real.pp_fn = pp_eval_prof + pp_label.format(lbl='real_label')
+  c.evals.teacher_minitrain = get_eval_t(minitrain_split)  # type: ignore[attr-defined]
+  c.evals.teacher_minival = get_eval_t(minival_split)  # type: ignore[attr-defined]
+  c.evals.teacher_val = get_eval_t(val_split)  # type: ignore[attr-defined]
+  c.evals.teacher_v2 = get_eval_t(test_split, 'imagenet_v2')  # type: ignore[attr-defined]
+  c.evals.teacher_a = get_eval_t(test_split, 'imagenet_a')  # type: ignore[attr-defined]
+  c.evals.teacher_r = get_eval_t(test_split, 'imagenet_r')  # type: ignore[attr-defined]
+  c.evals.teacher_real = get_eval_t(val_split, 'imagenet2012_real')  # type: ignore[attr-defined]
+  c.evals.teacher_real.pp_fn = pp_eval_prof + pp_label.format(lbl='real_label')  # type: ignore[attr-defined]
 
   # Distance evaluators
   def get_dist(split, s):
@@ -180,7 +180,7 @@ def get_config(arg=None):
                    {'kind': 'agree', 'k': 1}, {'kind': 'agree', 'k': 5}),
         cache_final=False,
     )
-  for s in c.flexi.seqhw.v:
+  for s in c.flexi.seqhw.v:  # type: ignore[attr-defined]
     c.evals[f'dist_minitrain_{s:02d}'] = get_dist(minitrain_split, s)
     c.evals[f'dist_val_{s:02d}'] = get_dist(val_split, s)
 

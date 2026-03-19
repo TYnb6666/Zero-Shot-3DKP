@@ -29,8 +29,8 @@ class OptaxTest(parameterized.TestCase):
 
   def test_get_count(self):
     params = jax.tree.map(jnp.array, {"a": 1.})
-    tx = optax.masked(
-        optax.scale_by_schedule(lambda step: step),
+    tx = optax.masked(  # type: ignore[attr-defined]
+        optax.scale_by_schedule(lambda step: step),  # type: ignore[attr-defined]
         {"a": True},
     )
     opt_state = tx.init(params)
@@ -312,7 +312,7 @@ class OptaxTest(parameterized.TestCase):
     tx, _ = bv_optax.make(config, params, sched_kw=sched_kw)
 
     opt_state = tx.init(params)
-    adam_state = bv_optax.find_states(opt_state, optax.ScaleByAdamState)
+    adam_state = bv_optax.find_states(opt_state, optax.ScaleByAdamState)  # type: ignore[attr-defined]
     nbytes = sum(
         jax.tree.flatten(jax.tree.map(lambda x: x.nbytes, adam_state))[0])
     self.assertLess(nbytes, 1_000)
@@ -329,7 +329,7 @@ class OptaxTest(parameterized.TestCase):
     tx, _ = bv_optax.make(config, params, sched_kw=sched_kw)
 
     opt_state = tx.init(params)
-    adafactor_state = bv_optax.find_states(opt_state, optax.FactoredState)
+    adafactor_state = bv_optax.find_states(opt_state, optax.FactoredState)  # type: ignore[attr-defined]
     n_state_params = sum(
         jax.tree.flatten(
             jax.tree.map(lambda x: np.prod(

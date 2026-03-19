@@ -20,6 +20,7 @@ A research codebase implementing zero-shot 3D keypoint detection using Multi-Mod
 - **MLLMs:** Molmo (AllenAI), GPT-4o (OpenAI), PaliGemma (Google)
 - **Build System:** Pixi (conda + PyPI), Docker
 - **CLI Framework:** Click
+- **Type Checker:** pyright (`basic` mode, 0 errors) — config in `pyrightconfig.json`
 - **Key Libraries:** einops, scipy, scikit-learn, matplotlib, pandas, potpourri3d, open3d, pyrender, pyrr, fast-hdbscan
 
 ## Environment Setup
@@ -184,6 +185,17 @@ torchrun clip_dinoiser/main_eval.py clip_dinoiser.yaml
 # Multi-GPU CLIP-DINOiser
 CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node=2 clip_dinoiser/main_eval.py clip_dinoiser.yaml
 ```
+
+### Type Checking
+
+```bash
+# Run pyright (requires dev environment)
+pixi run -e dev pyright
+
+# Expected: 0 errors (warnings are acceptable)
+```
+
+The entire codebase (including `patchalign3d/`, `ULIP/`, `molmo/`, `data_creation/`, `clip_dinoiser/`, `unsupervised_keypoints/`) passes pyright with zero errors. Configuration is in `pyrightconfig.json` (`typeCheckingMode: "basic"`, Python 3.13). Third-party libraries without type stubs use `# type: ignore` annotations where needed.
 
 ## Architecture Overview
 
@@ -510,7 +522,7 @@ Additional tests exist in vendored submodules:
 Current branch: `release`
 
 Recent development focuses on:
-- Python 3.13, PyTorch 2.9.1+cu130, CUDA 13.0
+- Python 3.13, PyTorch 2.10.0+cu130, CUDA 13.0
 - Pixi workspace with conda + PyPI dependency management (no post-install tasks)
 - CUDA extensions (pytorch3d, KNN-CUDA, pointnet2-ops) resolved via gt4o4 forks with torch in build-system.requires
 - Docker support (Dockerfile + docker-compose.yml with GPU)
@@ -522,3 +534,4 @@ Recent development focuses on:
 - Human3M dataset integration
 - COLMAP-to-PyTorch3D camera conversion
 - Merged and cleaned up `clip_dinoiser` and `patchalign3d+zerokey` branches
+- Full pyright type checking enforced project-wide (0 errors, `basic` mode)

@@ -51,7 +51,7 @@ class BertTest(tf.test.TestCase):
       f.write("\n".join(_BERT_VOCAB))
     ds2, _ = input_pipeline.make_for_inference(
         tf.data.Dataset.from_tensor_slices(
-            {inkey: tf.ragged.constant([["this is a test"]])}),
+            {inkey: tf.ragged.constant([["this is a test"]])}),  # type: ignore[arg-type]
         num_ex_per_process=[1],
         preprocess_fn=pp_builder.get_preprocess_fn(
             f"bert_tokenize(inkey='{inkey}', vocab_path='{vocab_path}', "

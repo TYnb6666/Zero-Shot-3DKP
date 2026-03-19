@@ -344,7 +344,7 @@ def shard_and_put(x, shard=True, put=True):
 
 
 def start_input_pipeline(data, n_prefetch=1, shard=True):
-  fn = functools.partial(shard_and_put, shard=shard, put=n_prefetch)
+  fn = functools.partial(shard_and_put, shard=shard, put=n_prefetch)  # type: ignore[arg-type]
   it = (jax.tree.map(fn, elem) for elem in iter(data))
   return prefetch_iterator(it, n_prefetch)
 

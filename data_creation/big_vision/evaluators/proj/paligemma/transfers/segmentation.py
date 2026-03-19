@@ -125,7 +125,7 @@ class Evaluator:
         else:
           mi = np.asarray(
               PIL.Image.fromarray(m64).resize(  # pytype: disable=wrong-arg-types  # pillow-102-upgrade
-                  [x2 - x1, y2 - y1], resample=PIL.Image.BILINEAR  # pytype: disable=module-attr
+                  [x2 - x1, y2 - y1], resample=PIL.Image.BILINEAR  # pytype: disable=module-attr  # type: ignore[attr-defined]
               )
           )  # Predicted mask in box-sized image.
           mi = mi > 0.0  # Mask decoder output in [-1.0 ... 1.0]

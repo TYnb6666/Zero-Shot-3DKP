@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import torch
-from diffusers import StableDiffusionPipeline, DDIMScheduler
+from diffusers import StableDiffusionPipeline, DDIMScheduler  # type: ignore[attr-defined]
 import numpy as np
 from . import ptp_utils
 from PIL import Image

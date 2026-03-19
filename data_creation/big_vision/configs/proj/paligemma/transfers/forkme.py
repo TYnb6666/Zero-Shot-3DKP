@@ -132,19 +132,19 @@ def get_config(arg=None):
   # Model section.
   c.model_name = 'proj.paligemma.paligemma'
   c.model = {}
-  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)
-  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)
+  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)  # type: ignore[attr-defined]
+  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)  # type: ignore[attr-defined]
   if not c.size:
     # PaliGemma
-    c.model.llm.variant = 'gemma_2b'
+    c.model.llm.variant = 'gemma_2b'  # type: ignore[attr-defined]
     c.model_init = f'pt_{c.res}'
   else:
     # PaliGemma 2
-    c.model.llm.variant = (
+    c.model.llm.variant = (  # type: ignore[attr-defined]
         'gemma2_' + {'3b': '2b', '10b': '9b', '28b': '27b'}[c.size]
     )
     c.model_init = f'pt_{c.size}_{c.res}'
-    c.model.llm.final_logits_softcap = 0.0  # Better for transfer.
+    c.model.llm.final_logits_softcap = 0.0  # Better for transfer.  # type: ignore[attr-defined]
 
   # FSDP strategy.
   c.mesh = [('data', -1)]

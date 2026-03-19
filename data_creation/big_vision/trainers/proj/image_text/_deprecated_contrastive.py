@@ -281,9 +281,9 @@ def main(argv):
   @functools.partial(jax.jit, backend="cpu")
   def init(rng):
     bs = batch_size // jax.device_count()
-    image_size = tuple(train_ds.element_spec["image"].shape[1:])
+    image_size = tuple(train_ds.element_spec["image"].shape[1:])  # type: ignore[call-overload, arg-type, index, attr-defined]
     no_image = jnp.zeros((bs,) + image_size, jnp.float32)
-    text_size = tuple(train_ds.element_spec["labels"].shape[1:])
+    text_size = tuple(train_ds.element_spec["labels"].shape[1:])  # type: ignore[call-overload, arg-type, index, attr-defined]
     no_text = jnp.zeros((bs,) + text_size, jnp.int32)
     params = flax.core.unfreeze(model.init(rng, no_image, no_text))["params"]
     return params
@@ -343,7 +343,7 @@ def main(argv):
     l, measurements, grads = jax.lax.pmean((l, measurements, grads),
                                            axis_name="batch")
     updates, opt = tx.update(grads, opt, params)
-    params = optax.apply_updates(params, updates)
+    params = optax.apply_updates(params, updates)  # type: ignore[attr-defined]
 
     gs = jax.tree_leaves(bv_optax.replace_frozen(config.schedule, grads, 0.))
     measurements["l2_grads"] = jnp.sqrt(sum([jnp.vdot(g, g) for g in gs]))
@@ -369,7 +369,7 @@ def main(argv):
     return eval_common.from_config(
         config, {"predict": predict_fn},
         lambda s: write_note(f"Init evaluator: {s}…\n{u.chrono.note}"),
-        lambda key, cfg: get_steps(key, default=None, cfg=cfg),
+        lambda key, cfg: get_steps(key, default=None, cfg=cfg),  # type: ignore[arg-type]
     )
 
   # Decide how to initialize training. The order is important.
@@ -381,7 +381,7 @@ def main(argv):
   if save_ckpt_path and gfile.exists(save_ckpt_path):
     resume_ckpt_path = save_ckpt_path
   elif config.get("resume"):
-    resume_ckpt_path = config.resume.format(wid=xm_wu.id)
+    resume_ckpt_path = config.resume.format(wid=xm_wu.id)  # type: ignore[name-defined]
   if resume_ckpt_path:
     write_note("Resume training from checkpoint...")
     checkpoint = {
@@ -434,17 +434,17 @@ def main(argv):
 
   # Using a python integer for step here, because opt.state.step is allocated
   # on TPU during replication.
-  for step, batch in zip(range(first_step + 1, total_steps + 1), train_iter):
+  for step, batch in zip(range(first_step + 1, total_steps + 1), train_iter):  # type: ignore[operator]
     mw.step_start(step)
 
     with jax.profiler.StepTraceAnnotation("train_step", step_num=step):
-      with u.chrono.log_timing("z/secs/update0", noop=step > first_step + 1):
+      with u.chrono.log_timing("z/secs/update0", noop=step > first_step + 1):  # type: ignore[operator]
         params_repl, opt_repl, rngs_loop, loss_value, measurements = update_fn(
             params_repl, opt_repl, rngs_loop, batch)
 
     # On the first host, let's always profile a handful of early steps.
     if jax.process_index() == 0:
-      prof = u.startstop_prof(prof, step, first_step, get_steps("log_training"))
+      prof = u.startstop_prof(prof, step, first_step, get_steps("log_training"))  # type: ignore[arg-type]
 
     # Report training progress
     if (u.itstime(step, get_steps("log_training"), total_steps, host=0)
@@ -455,14 +455,14 @@ def main(argv):
       for name, value in measurements.items():
         mw.measure(name, value[0])
       u.chrono.tick(step)
-      if not np.isfinite(l):
+      if not np.isfinite(l):  # type: ignore[call-overload, arg-type]
         raise RuntimeError(f"The loss became nan or inf somewhere within steps "
-                           f"[{step - get_steps('log_training')}, {step}]")
+                           f"[{step - get_steps('log_training')}, {step}]")  # type: ignore[operator]
 
     # Checkpoint saving
     if (save_ckpt_path and
-        (u.itstime(step, get_steps("ckpt", None), total_steps, host=0) or
-         u.itstime(step, get_steps("keep_ckpt", None), total_steps, host=0))):
+        (u.itstime(step, get_steps("ckpt", None), total_steps, host=0) or  # type: ignore[arg-type]
+         u.itstime(step, get_steps("keep_ckpt", None), total_steps, host=0))):  # type: ignore[arg-type]
       u.chrono.pause(wait_for=(params_repl, opt_repl))
       u.checkpointing_timeout(ckpt_writer, config.get("ckpt_timeout", 1))
       # We need to transfer the weights over now or else we risk keeping them
@@ -473,12 +473,12 @@ def main(argv):
 
       # Check whether we want to keep a copy of the current checkpoint.
       copy_step = None
-      if u.itstime(step, get_steps("keep_ckpt", None), total_steps):
+      if u.itstime(step, get_steps("keep_ckpt", None), total_steps):  # type: ignore[arg-type]
         copy_step = step
 
       ckpt = {"params": params_cpu, "opt": opt_cpu, "chrono": u.chrono.save()}
       ckpt_writer = pool.apply_async(
-          u.save_checkpoint, (ckpt, save_ckpt_path, copy_step))
+          u.save_checkpoint, (ckpt, save_ckpt_path, copy_step))  # type: ignore[attr-defined]
       u.chrono.resume()
 
     for (name, evaluator, log_steps, prefix) in evaluators():

@@ -37,9 +37,9 @@ def get_config(arg=None):
   config = ConfigDict()
 
   config.input = {}
-  config.input.data = dict(name='coco_captions', split='train')
-  config.input.batch_size = arg.batch_size if not arg.runlocal else 32
-  config.input.shuffle_buffer_size = 250_000  if not arg.runlocal else 50
+  config.input.data = dict(name='coco_captions', split='train')  # type: ignore[attr-defined]
+  config.input.batch_size = arg.batch_size if not arg.runlocal else 32  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 250_000  if not arg.runlocal else 50  # type: ignore[attr-defined]
 
   config.total_steps = 5_000 if not arg.runlocal else 1
 
@@ -53,7 +53,7 @@ def get_config(arg=None):
   tokenizer = lambda inkey: (
       f'bert_tokenize(inkey="{inkey}", max_len={arg.token_len}, '
       f'vocab_path="{vocab_path}")')
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       f'decode|resize({arg.res})|flip_lr|randaug(2,10)|value_range(-1,1)'
       f'|flatten|{tokenizer("captions/text")}|keep("image", "labels")'
   )
@@ -106,7 +106,7 @@ def get_config(arg=None):
   config.grad_clip_norm = 1.0
 
   config.evals = {}
-  config.evals.retrieval_coco = common.get_coco(
+  config.evals.retrieval_coco = common.get_coco(  # type: ignore[attr-defined]
       pp_img=f'resize({arg.res})|value_range(-1, 1)',
       pp_txt=tokenizer('texts'),
       log_steps=1000,

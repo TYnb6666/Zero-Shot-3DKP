@@ -150,7 +150,7 @@ def eval_input_pipeline(
       data_source.get_tfdata(ordered=True, allow_cache=cache.lower() != "none"),
       batch_size=batch_size,
       num_ex_per_process=data_source.num_examples_per_process(),
-      preprocess_fn=pp_builder.get_preprocess_fn(pp_fn, str(data)),
+      preprocess_fn=pp_builder.get_preprocess_fn(pp_fn, str(data)),  # type: ignore[arg-type]
       cache_final=cache == "raw_data",
       cache_raw=cache == "final_data")
   get_data_iter = lambda: input_pipeline.start_global(
@@ -197,7 +197,7 @@ def multiprocess_write_json(outfile, jobj):  # jobj = "json object"
     return
 
   outfile = resolve_outfile(outfile)
-  gfile.makedirs(os.path.dirname(outfile))
+  gfile.makedirs(os.path.dirname(outfile))  # type: ignore[call-overload, arg-type]
 
   if isinstance(jobj, list):
     combine_fn = list.extend
@@ -207,7 +207,7 @@ def multiprocess_write_json(outfile, jobj):  # jobj = "json object"
     raise TypeError(f"Can only write list or dict jsons, but got {type(jobj)}")
 
   # First, each process writes its own file.
-  with gfile.GFile(outfile + f".p{jax.process_index()}", "w+") as f:
+  with gfile.GFile(outfile + f".p{jax.process_index()}", "w+") as f:  # type: ignore[operator]
     f.write(json.dumps(jobj))
 
   u.sync()  # Wait for all files to be written; `with` above does close/flush.
@@ -216,13 +216,13 @@ def multiprocess_write_json(outfile, jobj):  # jobj = "json object"
   all_json = type(jobj)()
   if jax.process_index() == 0:
     for pid in range(jax.process_count()):
-      with gfile.GFile(outfile + f".p{pid}", "r") as f:
-        combine_fn(all_json, json.loads(f.read()))
+      with gfile.GFile(outfile + f".p{pid}", "r") as f:  # type: ignore[operator]
+        combine_fn(all_json, json.loads(f.read()))  # type: ignore[call-overload, arg-type]
     with gfile.GFile(outfile, "w+") as f:
       f.write(json.dumps(all_json))
 
   # Cleanup time
   u.sync()
-  gfile.remove(outfile + f".p{jax.process_index()}")
+  gfile.remove(outfile + f".p{jax.process_index()}")  # type: ignore[operator]
 
   return all_json

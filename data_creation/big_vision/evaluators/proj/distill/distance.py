@@ -113,7 +113,7 @@ class Evaluator:
       devices,
       **data_kw,
   ):
-    data = ds_core.get(**data)
+    data = ds_core.get(**data)  # type: ignore[call-overload]
     pp_fn = pp_builder.get_preprocess_fn(pp_fn)
     prefetch = data_kw.pop('prefetch', 1)
     self.ds, self.steps = input_pipeline.make_for_inference(

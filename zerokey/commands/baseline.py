@@ -16,43 +16,20 @@ def baseline_group() -> None:
 @click.option('--log-dir', '-d', type=click.Path(path_type=Path),
               default=DEFAULT_LOG_DIR, show_default=True,
               help='Output directory for results')
-@click.option('--expname', '-e', default='PatchAlign3D', show_default=True,
-              help='Experiment name')
+@click.option('--expname', '-e', default=None,
+              help='Experiment name (default: derived from mode)')
+@click.option('--mode', '-m', type=click.Choice(['patch', 'zerokey', 'ref']),
+              default='patch', show_default=True,
+              help='Operating mode: patch (base), zerokey (hybrid MLLM+patch), ref (reference-view)')
 @click.option('--save-images/--no-save-images', default=False,
               help='Save rendered images')
-def patchalign3d(log_dir: Path, expname: str, save_images: bool) -> None:
+def patchalign3d(log_dir: Path, expname: str | None, mode: str, save_images: bool) -> None:
     """PatchAlign3D baseline (Point-BERT patch alignment)"""
-    from zerokey.generators.patchalign3d import PatchAlign3DGenerator
-    generator = PatchAlign3DGenerator(log_dir, expname=expname)
+    from zerokey.generators.patchalign3d import PatchAlign3DGenerator, PatchAlign3DMode
+    if expname is None:
+        expname = {'patch': 'PatchAlign3D', 'zerokey': 'PatchAlign3DZeroKey', 'ref': 'PatchAlign3DRef'}[mode]
+    generator = PatchAlign3DGenerator(log_dir, expname=expname, mode=PatchAlign3DMode(mode))
     generator.main_loop(save_rendered_images=save_images)
-
-
-@baseline_group.command('patchalign3dzerokey')
-@click.option('--log-dir', '-d', type=click.Path(path_type=Path),
-              default=DEFAULT_LOG_DIR, show_default=True,
-              help='Output directory for results')
-@click.option('--expname', '-e', default='PatchAlign3DZeroKey', show_default=True,
-              help='Experiment name')
-@click.option('--save-images/--no-save-images', default=False,
-              help='Save rendered images')
-def patchalign3dzerokey(log_dir: Path, expname: str, save_images: bool) -> None:
-    """PatchAlign3DZeroKey baseline"""
-    from zerokey.generators.patchalign3dzerokey import PatchAlign3DZeroKeyGenerator
-    generator = PatchAlign3DZeroKeyGenerator(log_dir, expname=expname)
-    generator.main_loop(save_rendered_images=save_images)
-
-
-@baseline_group.command('patchalign3dref')
-@click.option('--log-dir', '-d', type=click.Path(path_type=Path),
-              default=DEFAULT_LOG_DIR, show_default=True,
-              help='Output directory for results')
-@click.option('--expname', '-e', default='PatchAlign3DRef', show_default=True,
-              help='Experiment name')
-def patchalign3dref(log_dir: Path, expname: str) -> None:
-    """PatchAlign3D with reference view support"""
-    from zerokey.generators.patchalign3dref import PatchAlign3DRefGenerator
-    generator = PatchAlign3DRefGenerator(log_dir, expname=expname)
-    generator.main_loop()
 
 
 @baseline_group.command('ulip2ref')

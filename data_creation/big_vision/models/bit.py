@@ -131,13 +131,13 @@ class Model(nn.Module):
 def get_block_desc(depth):
   if isinstance(depth, list):  # Be robust to silly mistakes.
     depth = tuple(depth)
-  return {
+  return {  # type: ignore[call-overload]
       26: [2, 2, 2, 2],  # From timm, gets ~75% on ImageNet.
       50: [3, 4, 6, 3],
       101: [3, 4, 23, 3],
       152: [3, 8, 36, 3],
       200: [3, 24, 36, 3]
-  }.get(depth, depth)
+  }.get(depth, depth)  # type: ignore[arg-type]
 
 
 def fix_old_checkpoints(params):

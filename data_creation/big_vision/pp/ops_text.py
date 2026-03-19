@@ -112,7 +112,7 @@ def tokenize(input_text, tokenizer, max_len, *, pad_value, force_eos,
 
 
 @Registry.register("preprocess_ops.tokenize")
-@utils.InKeyOutKey(indefault=None, outdefault="labels")
+@utils.InKeyOutKey(indefault=None, outdefault="labels")  # type: ignore[arg-type]
 def get_pp_tokenize(
     max_len,
     eos,
@@ -390,7 +390,7 @@ class SentencepieceTokenizer(bv_tok.Tokenizer):
   def to_int_tf_op(self, text, *, bos=False, eos=False):
     text = tf.convert_to_tensor(text)
     if text.ndim == 0:
-      def fn(txt):
+      def fn(txt):  # type: ignore[no-redef]
         s = txt.numpy().decode()
         return tf.constant(self.to_int(s, bos=bos, eos=eos), tf.int32)
       return tf.py_function(fn, [text], tf.int32)

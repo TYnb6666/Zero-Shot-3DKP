@@ -643,8 +643,8 @@ def load(init_params, init_file, model_cfg=None, dont_load=()):
     return np.r_[np.asarray(emb1), new_rows]
 
   if "vocab_size" in model_cfg:
-    params["embedder"]["input_embedding"] = extend_rows(
-        params["embedder"]["input_embedding"],
+    params["embedder"]["input_embedding"] = extend_rows(  # type: ignore[call-overload, arg-type]
+        params["embedder"]["input_embedding"],  # type: ignore[call-overload, arg-type]
         model_cfg["vocab_size"],
     )
 

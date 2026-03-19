@@ -84,20 +84,20 @@ def get_config(arg=None):
   }[arg.variant]
 
   config.input = dict()
-  config.input.data = dict(
+  config.input.data = dict(  # type: ignore[attr-defined]
       name='imagenet2012',
       split='train[:99%]',
   )
-  config.input.batch_size = 4096
-  config.input.cache = 'raw_data' if arg.runlocal else 'none'  # Needs up to 120GB of RAM!
-  config.input.shuffle_buffer_size = 250_000
+  config.input.batch_size = 4096  # type: ignore[attr-defined]
+  config.input.cache = 'raw_data' if arg.runlocal else 'none'  # Needs up to 120GB of RAM!  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 250_000  # type: ignore[attr-defined]
 
   pp_common = (
       '|value_range(-1, 1)'
       '|onehot(1000, key="{lbl}", key_result="labels")'
       '|keep("image", "labels")'
   )
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       'decode_jpeg_and_inception_crop(224)|flip_lr|' +
       RANDAUG_DEF[aug_setting] +
       pp_common.format(lbl='label')
@@ -110,7 +110,7 @@ def get_config(arg=None):
   # Aggressive pre-fetching because our models here are small, so we not only
   # can afford it, but we also need it for the smallest models to not be
   # bottle-necked by the input pipeline. Play around with it for -L models tho.
-  config.input.prefetch = 8
+  config.input.prefetch = 8  # type: ignore[attr-defined]
   config.prefetch_to_device = 4
 
   config.log_training_steps = 50
@@ -153,25 +153,25 @@ def get_config(arg=None):
         cache='final_data' if arg.runlocal else 'none',
     )
   config.evals = {}
-  config.evals.train = get_eval('train[:2%]')
-  config.evals.minival = get_eval('train[99%:]')
-  config.evals.val = get_eval('validation')
-  config.evals.v2 = get_eval('test', dataset='imagenet_v2')
-  config.evals.real = get_eval('validation', dataset='imagenet2012_real')
-  config.evals.real.pp_fn = pp_eval.format(lbl='real_label')
+  config.evals.train = get_eval('train[:2%]')  # type: ignore[attr-defined]
+  config.evals.minival = get_eval('train[99%:]')  # type: ignore[attr-defined]
+  config.evals.val = get_eval('validation')  # type: ignore[attr-defined]
+  config.evals.v2 = get_eval('test', dataset='imagenet_v2')  # type: ignore[attr-defined]
+  config.evals.real = get_eval('validation', dataset='imagenet2012_real')  # type: ignore[attr-defined]
+  config.evals.real.pp_fn = pp_eval.format(lbl='real_label')  # type: ignore[attr-defined]
 
   config.fewshot = get_fewshot_lsr(runlocal=arg.runlocal)
   config.fewshot.log_steps = 10_000
 
   # Make a few things much smaller for quick local debugging testruns.
   if arg.runlocal:
-    config.input.shuffle_buffer_size = 10
-    config.input.batch_size = 8
-    config.input.cache_raw = False
-    config.evals.train.data.split = 'train[:16]'
-    config.evals.minival.data.split = 'train[:16]'
-    config.evals.val.data.split = 'validation[:16]'
-    config.evals.v2.data.split = 'test[:16]'
-    config.evals.real.data.split = 'validation[:16]'
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
+    config.input.batch_size = 8  # type: ignore[attr-defined]
+    config.input.cache_raw = False  # type: ignore[attr-defined]
+    config.evals.train.data.split = 'train[:16]'  # type: ignore[attr-defined]
+    config.evals.minival.data.split = 'train[:16]'  # type: ignore[attr-defined]
+    config.evals.val.data.split = 'validation[:16]'  # type: ignore[attr-defined]
+    config.evals.v2.data.split = 'test[:16]'  # type: ignore[attr-defined]
+    config.evals.real.data.split = 'validation[:16]'  # type: ignore[attr-defined]
 
   return config

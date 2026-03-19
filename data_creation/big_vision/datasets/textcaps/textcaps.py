@@ -115,7 +115,7 @@ class TextCaps(tfds.core.GeneratorBasedBuilder):
         assert len(set(image_names)) == 1
         image_filepath = os.path.join(
             _FILEPATH, image_dir, str(image_names[0])+'.jpg')
-        id_to_example[k] = {
+        id_to_example[k] = {  # type: ignore[arg-type]
             'image/id': image_ids[0],
             'image_filepath': image_filepath,
             'image': image_filepath,

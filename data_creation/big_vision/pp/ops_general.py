@@ -201,7 +201,7 @@ def get_rag_tensor():
 
   def rag_tensor(raw_tensor):
     # Note: Add one more dimension as `from_tensor` requires at least rank 2.
-    return tf.RaggedTensor.from_tensor(raw_tensor[None])
+    return tf.RaggedTensor.from_tensor(raw_tensor[None])  # type: ignore[attr-defined]
 
   return rag_tensor
 
@@ -346,7 +346,7 @@ def get_choice(n="single", key=None, fewer_ok=False, inkey=None, outkey=None):
       indices = tf.random.shuffle(tf.range(nitems))
       end = n
       if is_varlen:
-        end = tf.random.uniform([], n[0], n[1] + 1, dtype=tf.int32)
+        end = tf.random.uniform([], n[0], n[1] + 1, dtype=tf.int32)  # type: ignore[arg-type, operator]
       # ...keep the order while subsampling (it might have a meaning, eg boxes)
       indices = tf.sort(indices[:end])
 
@@ -367,7 +367,7 @@ def _shuffled_index(count, nitems, seed):
   """Returns index from a shuffled sequence (items only repeat after epoch)."""
   nitems = tf.cast(nitems, count.dtype)
   item_epoch, item_offset = (count // nitems, count % nitems)
-  shuffled_indices = tf.random.experimental.stateless_shuffle(
+  shuffled_indices = tf.random.experimental.stateless_shuffle(  # type: ignore[attr-defined]
       tf.range(nitems), seed=tf.random.fold_in(seed, item_epoch))
   return shuffled_indices[item_offset]
 
@@ -455,8 +455,8 @@ def get_choice_no_replacement(key=None, inkey=None, outkey=None):
     shuffle_offset = count % nitems
 
     example_seed = tf.random.fold_in(seed, data["_id"])
-    shuffle_seed = tf.random.fold_in(example_seed, shuffle_epoch)
-    shuffle = tf.random.experimental.stateless_shuffle(
+    shuffle_seed = tf.random.fold_in(example_seed, shuffle_epoch)  # type: ignore[arg-type]
+    shuffle = tf.random.experimental.stateless_shuffle(  # type: ignore[attr-defined]
         tf.range(nitems), seed=shuffle_seed)
     index = shuffle[shuffle_offset]
 

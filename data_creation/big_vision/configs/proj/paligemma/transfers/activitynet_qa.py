@@ -172,8 +172,8 @@ def get_config(arg=None):
   # Model section.
   c.model_name = 'proj.paligemma.paligemma'
   c.model = {}
-  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)
-  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)
+  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)  # type: ignore[attr-defined]
+  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)  # type: ignore[attr-defined]
   c.model_init = f'pt_{c.res}'
 
   # FSDP strategy.
@@ -181,7 +181,7 @@ def get_config(arg=None):
   c.sharding_strategy = [('.*', 'fsdp(axis="data")')]
   c.sharding_rules = [('act_batch', ('data',))]
 
-  for split in c.input.data.keys():
+  for split in c.input.data.keys():  # type: ignore[misc]
     c.input[split].shuffle_buffer_size = 10_000
   c.log_training_steps = 50
   c.ckpt_steps = 1_000
@@ -190,7 +190,7 @@ def get_config(arg=None):
 
   # Update configs for quicker local runs and avoid swapping.
   if c.mode in ('runlocal', 'mock'):
-    for split in c.input.data.keys():
+    for split in c.input.data.keys():  # type: ignore[misc]
       c.input[split].shuffle_buffer_size = None
     for ev in c.evals.values():
       ev.data.first_k_shards = 1
@@ -206,8 +206,8 @@ def get_config(arg=None):
 def metrics(arg=None):  # pylint: disable=unused-argument
   m = ['training_loss']
   for split in ('minitrain', 'minival', 'val', 'eval'):
-    m.append(('epoch', f'{DATASET_NAME}/{split}/acc'))
+    m.append(('epoch', f'{DATASET_NAME}/{split}/acc'))  # type: ignore[arg-type]
   for split in ('minitrain', 'minival'):
-    m.append(('epoch', f'{DATASET_NAME}/{split}/pplx/avg'))
+    m.append(('epoch', f'{DATASET_NAME}/{split}/pplx/avg'))  # type: ignore[arg-type]
   return m
 

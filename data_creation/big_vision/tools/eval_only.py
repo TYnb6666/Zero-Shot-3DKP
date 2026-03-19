@@ -138,7 +138,7 @@ def main(argv):
     gfile.rmtree(workdir)
     try:  # Only need this on the last work-unit, if already empty.
       gfile.remove(os.path.join(workdir, ".."))
-    except tf.errors.OpError:
+    except tf.errors.OpError:  # type: ignore[name-defined]
       pass
 
 

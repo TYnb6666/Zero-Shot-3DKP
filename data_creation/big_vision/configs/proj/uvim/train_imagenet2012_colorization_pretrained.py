@@ -40,7 +40,7 @@ def get_config(arg=''):
   config = ConfigDict()
 
   config.input = {}
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       f'decode_jpeg_and_inception_crop({RES})'
       f'|flip_lr'
       f'|copy(inkey="image", outkey="labels")'
@@ -64,9 +64,9 @@ def get_config(arg=''):
       f'|strong_hash(inkey="tfds_id", outkey="image/id")'
       f'|keep("image","image_ctx","labels","image/id")')
 
-  config.input.data = dict(name='imagenet2012', split='train[4096:]')
-  config.input.batch_size = 512
-  config.input.shuffle_buffer_size = 50_000
+  config.input.data = dict(name='imagenet2012', split='train[4096:]')  # type: ignore[attr-defined]
+  config.input.batch_size = 512  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 50_000  # type: ignore[attr-defined]
 
   config.total_epochs = 50
 
@@ -123,23 +123,23 @@ def get_config(arg=''):
 
   # Evaluation section
   config.evals = {}
-  config.evals.val = ConfigDict()
-  config.evals.val.type = 'proj.uvim.compute_mean'
-  config.evals.val.pred = 'validation'
-  config.evals.val.data = dict(name=config.input.data.name, split='train[:4096]')
-  config.evals.val.pp_fn = pp_eval
-  config.evals.val.log_steps = 1000
+  config.evals.val = ConfigDict()  # type: ignore[attr-defined]
+  config.evals.val.type = 'proj.uvim.compute_mean'  # type: ignore[attr-defined]
+  config.evals.val.pred = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.data = dict(name=config.input.data.name, split='train[:4096]')  # type: ignore[attr-defined]
+  config.evals.val.pp_fn = pp_eval  # type: ignore[attr-defined]
+  config.evals.val.log_steps = 1000  # type: ignore[attr-defined]
 
   base = {
       'type': 'proj.uvim.psnr',
       'pp_fn': pp_eval.replace('decode|', ''),
       'log_steps': 10_000,
   }
-  config.evals.psnr_train = dict(**base, split='train[4096:8192]')
-  config.evals.psnr_holdout = dict(**base, split='train[:4096]')
-  config.evals.psnr_val = dict(**base, split='validation')
+  config.evals.psnr_train = dict(**base, split='train[4096:8192]')  # type: ignore[attr-defined]
+  config.evals.psnr_holdout = dict(**base, split='train[:4096]')  # type: ignore[attr-defined]
+  config.evals.psnr_val = dict(**base, split='validation')  # type: ignore[attr-defined]
 
-  config.evals.colorization_val_coltran_fid = {
+  config.evals.colorization_val_coltran_fid = {  # type: ignore[attr-defined]
       'type': 'proj.uvim.coltran_fid',
       'log_steps': 100_000,
   }
@@ -152,10 +152,10 @@ def get_config(arg=''):
   # config.evals.save_pred.outfile = 'inference.npz'
 
   if arg.singlehost:
-    config.input.batch_size = 32
+    config.input.batch_size = 32  # type: ignore[attr-defined]
     config.total_epochs = 20
   elif arg.runlocal:
-    config.input.batch_size = 8
-    config.input.shuffle_buffer_size = 10
-    config.evals.val.data.split = 'validation[:256]'
+    config.input.batch_size = 8  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
+    config.evals.val.data.split = 'validation[:256]'  # type: ignore[attr-defined]
   return config

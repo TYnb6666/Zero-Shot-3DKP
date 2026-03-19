@@ -152,7 +152,7 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
             # Draw colored circles at detected points. Each point gets a unique color
             # from COLOR_NAMES so we can recover which point is which after rasterization.
             cur_color = Image.new(mode='RGB', size=(imw, imh))
-            cast(Molmo, self.multimodal).draw_points(cur_color, kp_item, radius=self.proj_radius, width=None, colors=cast(list[str | None], list(self.COLOR_NAMES.values())))
+            Molmo.draw_points(cur_color, kp_item, radius=self.proj_radius, width=None, colors=cast(list[str | None], list(self.COLOR_NAMES.values())))
             cur_color = np.asarray(cur_color)  # [H, W, 3]
             cur_mask = np.any(cur_color, axis=-1)  # [H, W], True where a circle was drawn
             # Map drawn RGB colors back to integer class IDs via COLOR_MAP lookup

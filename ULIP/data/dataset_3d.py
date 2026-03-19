@@ -221,8 +221,8 @@ class ModelNet(data.Dataset):
                         else:
                             point_set = point_set[0:self.npoints, :]
 
-                        self.list_of_points[index] = point_set
-                        self.list_of_labels[index] = cls
+                        self.list_of_points[index] = point_set  # type: ignore[call-overload, arg-type]
+                        self.list_of_labels[index] = cls  # type: ignore[call-overload, arg-type]
 
                     with open(self.save_path, 'wb') as f:
                         pickle.dump([self.list_of_points, self.list_of_labels], f)
@@ -394,7 +394,7 @@ class ShapeNet(data.Dataset):
     def __getitem__(self, idx):
         sample = self.file_list[idx]
 
-        data = IO.get(os.path.join(self.pc_path, sample['file_path'])).astype(np.float32)
+        data = IO.get(os.path.join(self.pc_path, sample['file_path'])).astype(np.float32)  # type: ignore[attr-defined]
 
         if self.uniform and self.sample_points_num < data.shape[0]:
             data = farthest_point_sample(data, self.sample_points_num)
@@ -607,7 +607,7 @@ def merge_new_config(config, new_config):
                     try:
                         val = yaml.load(f, Loader=yaml.FullLoader)
                     except:
-                        val = yaml.load(f)
+                        val = yaml.load(f)  # type: ignore[call-overload]
                 config[key] = EasyDict()
                 merge_new_config(config[key], val)
             else:

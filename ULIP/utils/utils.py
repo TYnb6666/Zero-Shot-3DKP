@@ -19,7 +19,7 @@ def merge_new_config(config, new_config):
                     try:
                         val = yaml.load(f, Loader=yaml.FullLoader)
                     except:
-                        val = yaml.load(f)
+                        val = yaml.load(f)  # type: ignore[call-overload]
                 config[key] = EasyDict()
                 merge_new_config(config[key], val)
             else:

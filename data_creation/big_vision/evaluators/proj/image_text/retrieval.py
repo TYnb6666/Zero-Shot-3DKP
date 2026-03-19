@@ -111,7 +111,7 @@ def prepare_datasets(
     texts = get_feature_value(features, txt_name)
     texts = tf.experimental.numpy.atleast_1d(texts)  # For single-text GT.
     texts_n = tf.shape(texts)[0]
-    return tf.data.Dataset.from_tensor_slices({
+    return tf.data.Dataset.from_tensor_slices({  # type: ignore[arg-type]
         "id": tf.tile([idx + offset], [texts_n]),
         "caption_i": tf.stack(tf.range(texts_n)),
         "texts": tf.stack(texts),

@@ -133,7 +133,7 @@ class TreeTest(tf.test.TestCase):
       v3: float
       v2: int
       v1: str
-    self.d3 = {'a': 0, 'flax': FlaxStruct(2.0, 1, 's')}
+    self.d3 = {'a': 0, 'flax': FlaxStruct(2.0, 1, 's')}  # type: ignore[call-overload]
     self.d3_flat = [0, 1, 2.0, 's']
     self.d3_flat_jax = jax.tree.flatten(self.d3)[0]
     self.d3_named_flat = [
@@ -251,7 +251,7 @@ class StepConversionTest(parameterized.TestCase, tf.test.TestCase):
       step = utils.steps('bar', cfg, data_size=data_size, batch_size=batch_size,
                          total_steps=total)
     step = utils.steps('bar', cfg, data_size=data_size, batch_size=batch_size,
-                       total_steps=total, default=1234)
+                       total_steps=total, default=1234)  # type: ignore[arg-type]
     self.assertEqual(step, 1234)
 
 

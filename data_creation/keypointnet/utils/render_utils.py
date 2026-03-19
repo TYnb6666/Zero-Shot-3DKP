@@ -27,7 +27,7 @@ import time
 
 SIZE = None
 Vector3dVector, Vector3iVector = utility.Vector3dVector, utility.Vector3iVector
-draw_geometries = o3d.visualization.draw_geometries
+draw_geometries = o3d.visualization.draw_geometries  # type: ignore[attr-defined]
 
 
 def rotation_matrix_x(angle):
@@ -97,7 +97,7 @@ class NormalShader:
             self, vertex_shader=None, fragment_shader=None, geometry_shader=None, defines=None
     ):
         # overwrite the shader files
-        self.program = pyrender.shader_program.ShaderProgram(
+        self.program = pyrender.shader_program.ShaderProgram(  # type: ignore[attr-defined]
             vertex_shader=str(_UTILS_DIR.parent / "third_party/mesh_to_sdf/shader/mesh.vert"),
             fragment_shader=str(_UTILS_DIR.parent / "third_party/mesh_to_sdf/shader/mesh.frag"),
             defines=defines
@@ -113,7 +113,7 @@ class Render:
 
         if not isinstance(camera_poses, np.ndarray):
             print("preparing camera!")
-            self.camera_poses = create_uniform_camera_poses(2.0)
+            self.camera_poses = create_uniform_camera_poses(2.0)  # type: ignore[arg-type]
         else:
             self.camera_poses = camera_poses
 
@@ -131,10 +131,10 @@ class Render:
         if not isinstance(mesh, trimesh.Trimesh):
             mesh = prepare_mesh(path, color=False, clean=clean)
             if not color:
-                mesh = trimesh.Trimesh(vertices=mesh.vertices, faces=mesh.faces)
+                mesh = trimesh.Trimesh(vertices=mesh.vertices, faces=mesh.faces)  # type: ignore[attr-defined]
         try:
-            if mesh.visual.defined:
-                mesh.visual.material.kwargs["Ns"] = 1.0
+            if mesh.visual.defined:  # type: ignore[attr-defined]
+                mesh.visual.material.kwargs["Ns"] = 1.0  # type: ignore[attr-defined]
         except:
             pass
             # print("Error loading material!")
@@ -168,7 +168,7 @@ def correct_normals(mesh, camera_poses, correct=True):
     p_images = []
     for _, i in tqdm(enumerate(range(camera_poses.shape[0]))):
         a, b, index_tri, sign, p_image = trimesh_ray_tracing(
-            mesh, camera_poses[i], resolution=SIZE, rayintersector=rayintersector
+            mesh, camera_poses[i], resolution=SIZE, rayintersector=rayintersector  # type: ignore[arg-type]
         )
         if correct:
             mesh.faces[index_tri[sign > 0]] = np.fliplr(mesh.faces[index_tri[sign > 0]])
@@ -206,8 +206,8 @@ def all_rendering(mesh, camera_poses, light=False, viz=False, correct=True):
     color_images = []
 
     for i in range(camera_poses.shape[0]):
-        a, b, index_tri, sign = trimesh_ray_tracing(
-            mesh, camera_poses[i], resolution=SIZE, rayintersector=rayintersector
+        a, b, index_tri, sign = trimesh_ray_tracing(  # type: ignore[misc]
+            mesh, camera_poses[i], resolution=SIZE, rayintersector=rayintersector  # type: ignore[arg-type]
         )
         if correct:
             mesh.faces[index_tri[sign > 0]] = np.fliplr(mesh.faces[index_tri[sign > 0]])
@@ -223,11 +223,11 @@ def all_rendering(mesh, camera_poses, light=False, viz=False, correct=True):
             update_light(scene, lights, camera_poses[i])
 
         if light:
-            color, _ = r.render(
+            color, _ = r.render(  # type: ignore[union-attr]
                 scene
             )  # , flags=pyrender.constants.RenderFlags.SKIP_CULL_FACES
         else:
-            color, _ = r.render(
+            color, _ = r.render(  # type: ignore[union-attr]
                 scene
             )  # | pyrender.constants.RenderFlags.SKIP_CULL_FACES
             # , flags=pyrender.constants.RenderFlags.FLAT
@@ -255,16 +255,16 @@ def normalize_mesh(mesh, mode="sphere"):
 def prepare_mesh(model_name, color=False, clean=False, mode='com'):
     mesh = trimesh.load(model_name, force="mesh")
     if clean:
-        mesh.remove_duplicate_faces()
-        mesh.remove_degenerate_faces()
-        mesh.remove_unreferenced_vertices()
+        mesh.remove_duplicate_faces()  # type: ignore[attr-defined]
+        mesh.remove_degenerate_faces()  # type: ignore[attr-defined]
+        mesh.remove_unreferenced_vertices()  # type: ignore[attr-defined]
 
-    translation, scale = normalize_mesh(mesh, mode)
+    translation, scale = normalize_mesh(mesh, mode)  # type: ignore[union-attr]
     return mesh, translation, scale
 
 
 def clean_using_o3d(mesh):
-    mesh = convert_trimesh_to_o3d(mesh)
+    mesh = convert_trimesh_to_o3d(mesh)  # type: ignore[name-defined]
     mesh.remove_degenerate_triangles()
     mesh.remove_duplicated_triangles()
     mesh.remove_duplicated_vertices()
@@ -272,8 +272,8 @@ def clean_using_o3d(mesh):
     mesh.compute_triangle_normals()
     mesh.compute_vertex_normals()
     p = mesh.sample_points_poisson_disk(10000, 1)
-    o3d.visualization.draw_geometries([mesh, p])
-    return convert_o3d_to_trimesh(mesh)
+    o3d.visualization.draw_geometries([mesh, p])  # type: ignore[attr-defined]
+    return convert_o3d_to_trimesh(mesh)  # type: ignore[name-defined]
 
 
 def init_light(scene, camera_pose, intensity=6.0):
@@ -304,9 +304,9 @@ def render_normal_map(mesh, camera_pose, size, viz=False):
     scene.add(camera, pose=camera_pose)
 
     renderer = pyrender.OffscreenRenderer(size, size)
-    renderer._renderer._program_cache = NormalShader()
+    renderer._renderer._program_cache = NormalShader()  # type: ignore[attr-defined]
 
-    normals, depth = renderer.render(
+    normals, depth = renderer.render(  # type: ignore[union-attr]
         scene
     )  # flags=pyrender.constants.RenderFlags.SKIP_CULL_FACES
     world_space_normals = normals / 255 * 2 - 1
@@ -340,10 +340,10 @@ def pyrender_rendering(mesh, camera_poses, viz=False, light=False, intensity=6.0
             update_light(scene, lights, camera_poses[i])
 
         if light:
-            color, depth = r.render(scene,
+            color, depth = r.render(scene,  # type: ignore[union-attr]
                                     flags=pyrender.constants.RenderFlags.NONE)
         else:
-            color, depth = r.render(
+            color, depth = r.render(  # type: ignore[union-attr]
                 scene, flags=pyrender.constants.RenderFlags.FLAT
             )  # | pyrender.constants.RenderFlags.SKIP_CULL_FACES
 

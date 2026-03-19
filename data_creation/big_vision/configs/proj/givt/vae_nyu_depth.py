@@ -32,14 +32,14 @@ def get_config(arg='res=512,patch_size=16'):
   config = mlc.ConfigDict()
 
   config.input = {}
-  config.input.data = dict(name='nyu_depth_v2', split='train')
+  config.input.data = dict(name='nyu_depth_v2', split='train')  # type: ignore[attr-defined]
 
-  config.input.batch_size = 1024
-  config.input.shuffle_buffer_size = 25_000
+  config.input.batch_size = 1024  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 25_000  # type: ignore[attr-defined]
 
   config.total_epochs = 200
 
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       f'decode|nyu_depth|'
       f'randu("fliplr")|det_fliplr(key="image")|det_fliplr(key="labels")|'
       f'inception_box|crop_box(key="image")|crop_box(key="labels")|'
@@ -110,25 +110,25 @@ def get_config(arg='res=512,patch_size=16'):
 
   # Evaluation section
   config.evals = {}
-  config.evals.val = mlc.ConfigDict()
-  config.evals.val.type = 'mean'
-  config.evals.val.pred = 'validation'
-  config.evals.val.data = {**config.input.data}
-  config.evals.val.data.split = 'validation'
-  config.evals.val.pp_fn = pp_eval
-  config.evals.val.log_steps = 250
+  config.evals.val = mlc.ConfigDict()  # type: ignore[attr-defined]
+  config.evals.val.type = 'mean'  # type: ignore[attr-defined]
+  config.evals.val.pred = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.data = {**config.input.data}  # type: ignore[attr-defined]
+  config.evals.val.data.split = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.pp_fn = pp_eval  # type: ignore[attr-defined]
+  config.evals.val.log_steps = 250  # type: ignore[attr-defined]
 
   base = {
       'type': 'proj.givt.nyu_depth',
-      'data': {**config.input.data},
+      'data': {**config.input.data},  # type: ignore[attr-defined]
       'pp_fn': pp_pred,
       'pred': 'predict_depth',
       'log_steps': 2000,
       'min_depth': MIN_DEPTH,
       'max_depth': MAX_DEPTH,
   }
-  config.evals.nyu_depth_val = {**base}
-  config.evals.nyu_depth_val.data.split = 'validation'
+  config.evals.nyu_depth_val = {**base}  # type: ignore[attr-defined]
+  config.evals.nyu_depth_val.data.split = 'validation'  # type: ignore[attr-defined]
 
   # ### Uses a lot of memory
   # config.evals.save_pred = dict(type='proj.givt.save_predictions')
@@ -143,16 +143,16 @@ def get_config(arg='res=512,patch_size=16'):
   config.seed = 0
 
   if arg.singlehost:
-    config.input.batch_size = 128
+    config.input.batch_size = 128  # type: ignore[attr-defined]
     config.num_epochs = 50
   elif arg.runlocal:
-    config.input.batch_size = 16
-    config.input.shuffle_buffer_size = 10
+    config.input.batch_size = 16  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
     config.log_training_steps = 5
     config.model.enc_depth = 1
     config.model.dec_depth = 1
-    config.evals.val.data.split = 'validation[:16]'
-    config.evals.val.log_steps = 20
-    config.evals.nyu_depth_val.data.split = 'validation[:16]'
+    config.evals.val.data.split = 'validation[:16]'  # type: ignore[attr-defined]
+    config.evals.val.log_steps = 20  # type: ignore[attr-defined]
+    config.evals.nyu_depth_val.data.split = 'validation[:16]'  # type: ignore[attr-defined]
 
   return config

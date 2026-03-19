@@ -59,7 +59,7 @@ class MolmoTextKwargs(TextKwargs, total=False):
 class MolmoProcessorKwargs(ProcessingKwargs, total=False):
     text_kwargs: MolmoTextKwargs
     images_kwargs: MolmoImagesKwargs
-    _defaults = {
+    _defaults = {  # type: ignore[reportGeneralTypeIssues]
         "images_kwargs": {
             "max_crops": 12,
             "overlap_margins": [4, 4],
@@ -85,7 +85,7 @@ class MolmoProcessor(ProcessorMixin):
     image_processor_class = "AutoImageProcessor"
     tokenizer_class = ("Qwen2Tokenizer", "Qwen2TokenizerFast")
 
-    def __init__(self, image_processor: MolmoImageProcessor = None, tokenizer : AutoTokenizer = None, **kwargs):
+    def __init__(self, image_processor: MolmoImageProcessor = None, tokenizer: AutoTokenizer = None, **kwargs):  # type: ignore[assignment]
         # self.image_processor = image_processor
         # self.tokenizer = tokenizer
         super().__init__(image_processor, tokenizer)
@@ -94,7 +94,7 @@ class MolmoProcessor(ProcessorMixin):
     @property
     def special_token_ids(self):
         if self._special_tokens is None:
-            self._special_tokens = get_special_token_ids(self.tokenizer)
+            self._special_tokens = get_special_token_ids(self.tokenizer)  # type: ignore[attr-defined]
         return self._special_tokens
 
     def get_tokens_input(self, prompt, message_format, always_start_with_space):
@@ -108,21 +108,21 @@ class MolmoProcessor(ProcessorMixin):
         if always_start_with_space:
             prompt = " " + prompt
 
-        tokens = self.tokenizer.encode(prompt, add_special_tokens=False)
+        tokens = self.tokenizer.encode(prompt, add_special_tokens=False)  # type: ignore[attr-defined]
 
         return tokens
 
     def process(
         self,
-        text: TextInput = None,
-        images: ImageInput = None,
+        text: TextInput = None,  # type: ignore[assignment]
+        images: ImageInput = None,  # type: ignore[assignment]
         *,
         tokens: Optional[PreTokenizedInput] = None,
         **kwargs: Unpack[MolmoProcessorKwargs],
     ):
         output_kwargs = self._merge_kwargs(
-            MolmoProcessorKwargs,
-            tokenizer_init_kwargs=self.tokenizer.init_kwargs,
+            MolmoProcessorKwargs,  # type: ignore[arg-type]
+            tokenizer_init_kwargs=self.tokenizer.init_kwargs,  # type: ignore[attr-defined]
             **kwargs,
         )
 
@@ -137,9 +137,9 @@ class MolmoProcessor(ProcessorMixin):
 
         if images is not None:
             if not isinstance(images, (list, tuple)):
-                images = [images]
+                images = [images]  # type: ignore[assignment]
             image_arrays = []
-            for image in images:
+            for image in images:  # type: ignore[union-attr]
                 if isinstance(image, Image):
                     image = image.convert("RGB")
                     # Handle images with EXIF orientation tags, which PIL will ignore by default
@@ -149,7 +149,7 @@ class MolmoProcessor(ProcessorMixin):
                 else:
                     assert len(image.shape) == 3 and image.shape[-1] == 3
                     image_arrays.append(image.astype(np.uint8))
-            images = image_arrays
+            images = image_arrays  # type: ignore[assignment]
             # For now only support inserting images at the start
             image_idx = [-1]*len(images)
         else:
@@ -161,7 +161,7 @@ class MolmoProcessor(ProcessorMixin):
         image_col_token_id = self.special_token_ids[DEFAULT_IM_COL_TOKEN]
         image_start_token_id = self.special_token_ids[DEFAULT_IM_START_TOKEN]
         image_end_token_id = self.special_token_ids[DEFAULT_IM_END_TOKEN]
-        out = self.image_processor.multimodal_preprocess(
+        out = self.image_processor.multimodal_preprocess(  # type: ignore[attr-defined]
             images=images,
             image_idx=image_idx,
             tokens=np.asarray(tokens).astype(np.int32),
@@ -175,7 +175,7 @@ class MolmoProcessor(ProcessorMixin):
 
         # Prepend BOS
         # qwen2 and olmo do not have a BOS, and instead use EOS as a generic seperator token.
-        bos = self.tokenizer.bos_token_id or self.tokenizer.eos_token_id
+        bos = self.tokenizer.bos_token_id or self.tokenizer.eos_token_id  # type: ignore[attr-defined]
         decoder_input_tokens = np.pad(out["input_ids"], [[1, 0]], constant_values=bos)
         out["input_ids"] = decoder_input_tokens
         if "image_input_idx" in out:

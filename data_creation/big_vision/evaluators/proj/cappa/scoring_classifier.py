@@ -60,4 +60,4 @@ class Evaluator(mean.Evaluator):
 
   def __init__(self, predict_fn, data, pp_fn, pp_txt, *a, **kw):
     cls_tokens = get_classes(data["name"], pp_txt)
-    super().__init__(scoring(predict_fn, cls_tokens), data, pp_fn, *a, **kw)
+    super().__init__(scoring(predict_fn, cls_tokens), data, pp_fn, *a, **kw)  # type: ignore[call-overload]

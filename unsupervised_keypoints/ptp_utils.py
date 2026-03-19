@@ -253,19 +253,19 @@ def run_and_find_attn(
     
     attention_maps=[]
     
-    for controller in controllers:
+    for controller in controllers:  # type: ignore[union-attr]
 
         _attention_maps = collect_maps(
-            controllers[controller],
+            controllers[controller],  # type: ignore[index]
             from_where=from_where,
             upsample_res=upsample_res,
             layers=layers,
             indices=indices,
         )
-        
+
         attention_maps.append(_attention_maps)
 
-        controllers[controller].reset()
+        controllers[controller].reset()  # type: ignore[index]
         
         
 
@@ -508,7 +508,7 @@ def register_attention_control(model, controller, feature_upsample_res=256):
             if (
                 is_cross
                 and sequence_length <= 32**2
-                and len(controller.step_store["attn"]) < 4
+                and len(controller.step_store["attn"]) < 4  # type: ignore[union-attr]
             ):
                 x_reshaped = x.reshape(
                     batch_size,
@@ -573,14 +573,14 @@ def register_attention_control(model, controller, feature_upsample_res=256):
     assert cross_att_count != 0, "No cross attention layers found in the model. Please check to make sure you're using diffusers==0.8.0."
 
 
-def get_word_inds(text: str, word_place: int, tokenizer):
+def get_word_inds(text: str, word_place: "int | str | list[int]", tokenizer):
     split_text = text.split(" ")
     if type(word_place) is str:
         word_place = [i for i, word in enumerate(split_text) if word_place == word]
     elif type(word_place) is int:
         word_place = [word_place]
     out = []
-    if len(word_place) > 0:
+    if len(word_place) > 0:  # type: ignore[arg-type]
         words_encode = [
             tokenizer.decode([item]).strip("#") for item in tokenizer.encode(text)
         ][1:-1]
@@ -588,7 +588,7 @@ def get_word_inds(text: str, word_place: int, tokenizer):
 
         for i in range(len(words_encode)):
             cur_len += len(words_encode[i])
-            if ptr in word_place:
+            if ptr in word_place:  # type: ignore[operator]
                 out.append(i + 1)
             if cur_len >= len(split_text[ptr]):
                 ptr += 1
@@ -604,7 +604,7 @@ def update_alpha_time_word(
 ):
     if type(bounds) is float:
         bounds = 0, bounds
-    start, end = int(bounds[0] * alpha.shape[0]), int(bounds[1] * alpha.shape[0])
+    start, end = int(bounds[0] * alpha.shape[0]), int(bounds[1] * alpha.shape[0])  # type: ignore[index]
     if word_inds is None:
         word_inds = torch.arange(alpha.shape[2])
     alpha[:start, prompt_ind, word_inds] = 0
@@ -621,24 +621,24 @@ def get_time_words_attention_alpha(
     max_num_words=77,
 ):
     if type(cross_replace_steps) is not dict:
-        cross_replace_steps = {"default_": cross_replace_steps}
-    if "default_" not in cross_replace_steps:
-        cross_replace_steps["default_"] = (0.0, 1.0)
+        cross_replace_steps = {"default_": cross_replace_steps}  # type: ignore[assignment]
+    if "default_" not in cross_replace_steps:  # type: ignore[operator]
+        cross_replace_steps["default_"] = (0.0, 1.0)  # type: ignore[index]
     alpha_time_words = torch.zeros(num_steps + 1, len(prompts) - 1, max_num_words)
     for i in range(len(prompts) - 1):
         alpha_time_words = update_alpha_time_word(
-            alpha_time_words, cross_replace_steps["default_"], i
+            alpha_time_words, cross_replace_steps["default_"], i  # type: ignore[index]
         )
-    for key, item in cross_replace_steps.items():
+    for key, item in cross_replace_steps.items():  # type: ignore[union-attr]
         if key != "default_":
             inds = [
-                get_word_inds(prompts[i], key, tokenizer)
+                get_word_inds(prompts[i], key, tokenizer)  # type: ignore[arg-type]
                 for i in range(1, len(prompts))
             ]
             for i, ind in enumerate(inds):
                 if len(ind) > 0:
                     alpha_time_words = update_alpha_time_word(
-                        alpha_time_words, item, i, ind
+                        alpha_time_words, item, i, ind  # type: ignore[arg-type]
                     )
     alpha_time_words = alpha_time_words.reshape(
         num_steps + 1, len(prompts) - 1, 1, 1, max_num_words

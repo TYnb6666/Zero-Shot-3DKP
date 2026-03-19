@@ -135,9 +135,9 @@ class MobileNetV2(nn.Module):
 
             for i in range(n):
                 if i==0:
-                    features.append(block(input_channel, output_channel, stride, previous_dilation, expand_ratio=t))
+                    features.append(block(input_channel, output_channel, stride, previous_dilation, expand_ratio=t))  # type: ignore[arg-type]
                 else:
-                    features.append(block(input_channel, output_channel, 1, dilation, expand_ratio=t))
+                    features.append(block(input_channel, output_channel, 1, dilation, expand_ratio=t))  # type: ignore[arg-type]
                 input_channel = output_channel
         # building last several layers
         features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1))

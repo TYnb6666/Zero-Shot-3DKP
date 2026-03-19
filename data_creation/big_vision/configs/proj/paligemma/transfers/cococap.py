@@ -146,8 +146,8 @@ def get_config(arg=None):
   # Model section.
   c.model_name = 'proj.paligemma.paligemma'
   c.model = {}
-  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)
-  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)
+  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)  # type: ignore[attr-defined]
+  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)  # type: ignore[attr-defined]
   c.model_init = f'pt_{c.res}'
 
   # FSDP strategy.
@@ -189,6 +189,6 @@ sweep = sweep_best  # Choose which sweep to run.
 def metrics(arg=None):  # pylint: disable=unused-argument
   m = ['training_loss']
   for split in ('eval', 'minival', 'minitrain'):
-    m.append(('epoch', f'cococap/{split}/cider'))
-    m.append(('epoch', f'cococap/{split}/pplx/avg'))
+    m.append(('epoch', f'cococap/{split}/cider'))  # type: ignore[arg-type]
+    m.append(('epoch', f'cococap/{split}/pplx/avg'))  # type: ignore[arg-type]
   return m

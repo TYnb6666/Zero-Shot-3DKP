@@ -66,7 +66,7 @@ class PreprocessOpsTest(tf.test.TestCase):
 
   def test_crop_box(self):
     data = get_image_data()
-    data["box"] = (tf.constant([0.5, 0.4]), tf.constant([0.25, 0.3]))
+    data["box"] = (tf.constant([0.5, 0.4]), tf.constant([0.25, 0.3]))  # type: ignore[arg-type]
     for out in self.tfrun(pp.get_crop_box(), data):
       self.assertEqual(out["image"].shape, (160, 96, 3))
       self.assertAllEqual(

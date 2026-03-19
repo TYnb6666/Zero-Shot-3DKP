@@ -225,13 +225,13 @@ def _init_state(prompts, cache, init_rng_key, num_samples):
   cache = cache_map(
       lambda x: expand_samples_dim_and_flatten(x, num_samples), cache)
   return LoopState(
-      cur_index=0,
-      cache=cache,
-      flags_finished=jnp.zeros((batch_size*num_samples), dtype=jnp.bool_),
-      sequences=expand_samples_dim_and_flatten(prompts, num_samples),
-      scores=jnp.zeros((batch_size*num_samples)),
-      logprobs=jnp.zeros((batch_size*num_samples, max_decode_len_plus_one-1)),
-      rng=init_rng_key)
+      cur_index=0,  # type: ignore[call-overload]
+      cache=cache,  # type: ignore[call-overload]
+      flags_finished=jnp.zeros((batch_size*num_samples), dtype=jnp.bool_),  # type: ignore[call-overload]
+      sequences=expand_samples_dim_and_flatten(prompts, num_samples),  # type: ignore[call-overload]
+      scores=jnp.zeros((batch_size*num_samples)),  # type: ignore[call-overload]
+      logprobs=jnp.zeros((batch_size*num_samples, max_decode_len_plus_one-1)),  # type: ignore[call-overload]
+      rng=init_rng_key)  # type: ignore[call-overload]
 
 
 def _should_temperature_sampling_continue(state, max_decode_len):
@@ -303,13 +303,13 @@ def _temperature_sampling_iteration(state, tokens_to_logits, temperature, eos,
   flags_finished = out_of_prompt & (state.flags_finished |
                                     (sampled_tokens == eos))
   return LoopState(
-      cur_index=state.cur_index+1,
-      cache=new_cache,
-      flags_finished=flags_finished,
-      sequences=sequences,
-      scores=scores,
-      logprobs=seqs_logprobs,
-      rng=rng)
+      cur_index=state.cur_index+1,  # type: ignore[call-overload]
+      cache=new_cache,  # type: ignore[call-overload]
+      flags_finished=flags_finished,  # type: ignore[call-overload]
+      sequences=sequences,  # type: ignore[call-overload]
+      scores=scores,  # type: ignore[call-overload]
+      logprobs=seqs_logprobs,  # type: ignore[call-overload]
+      rng=rng)  # type: ignore[call-overload]
 
 
 def _temperature_sampling(prompts, cache, tokens_to_logits, num_samples=1,

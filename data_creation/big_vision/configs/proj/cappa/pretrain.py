@@ -40,7 +40,7 @@ def get_config(arg=None):
 
   config.evals = {}
   config.input = {}
-  config.input.batch_size = config.batch_size if not config.runlocal else 8
+  config.input.batch_size = config.batch_size if not config.runlocal else 8  # type: ignore[attr-defined]
   shuffle_buffer_size = 50_000 if not config.runlocal else 50
 
   res = 224
@@ -56,14 +56,14 @@ def get_config(arg=None):
   pp_coco = (f'decode|{pp_image}|'
              'coco_captions("captions")|choice(inkey="captions", outkey="text")|'
              f'{tokenizer("text", "labels")}|keep("image", "labels")')
-  config.input.pp = pp_coco
+  config.input.pp = pp_coco  # type: ignore[attr-defined]
 
   # NOTE: "coco_captions" is way too small a dataset to train on. It's simply
   # used here to serve as a smoke test that the implementation works correctly.
-  config.input.data = dict(name='coco_captions', split='train')  # num_examples=82_783
-  config.input.shuffle_buffer_size = shuffle_buffer_size
+  config.input.data = dict(name='coco_captions', split='train')  # num_examples=82_783  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = shuffle_buffer_size  # type: ignore[attr-defined]
 
-  config.evals.val_coco = {
+  config.evals.val_coco = {  # type: ignore[attr-defined]
       'type': 'proj.cappa.perplexity',
       'pred': 'perplexity',
       'log_steps': 1000,
@@ -72,13 +72,13 @@ def get_config(arg=None):
   }
 
   # Few-shot  metrics
-  config.evals.fewshot = common_fewshot.get_fewshot_lsr(
+  config.evals.fewshot = common_fewshot.get_fewshot_lsr(  # type: ignore[attr-defined]
       target_resolution=res, resize_resolution=int(256 / 224 * res))
-  config.evals.fewshot.type = 'fewshot_lsr'
-  config.evals.fewshot.log_steps = 5_000 if not config.runlocal else 5
-  config.evals.fewshot.representation_layer = 'pre_logits'
-  config.evals.fewshot.pred = 'enc_rep'
-  config.evals.fewshot.pp_eval = config.evals.fewshot.pp_train
+  config.evals.fewshot.type = 'fewshot_lsr'  # type: ignore[attr-defined]
+  config.evals.fewshot.log_steps = 5_000 if not config.runlocal else 5  # type: ignore[attr-defined]
+  config.evals.fewshot.representation_layer = 'pre_logits'  # type: ignore[attr-defined]
+  config.evals.fewshot.pred = 'enc_rep'  # type: ignore[attr-defined]
+  config.evals.fewshot.pp_eval = config.evals.fewshot.pp_train  # type: ignore[attr-defined]
 
   # NOTE: Scoring of the entire imagenet validation set is rather slow:
   # ~100 secs / 1k classes / host.

@@ -61,7 +61,7 @@ class Evaluator:
     self.out_question_key = out_question_key
     self.out_answer_key = out_answer_key
     # This will mostly look the same across all evaluators, preparing data:
-    data = big_vision.datasets.core.get(**data)
+    data = big_vision.datasets.core.get(**data)  # type: ignore[call-overload]
     pp_fn = big_vision.pp.builder.get_preprocess_fn(pp_fn)
     self.ds, self.steps = big_vision.input_pipeline.make_for_inference(
         data.get_tfdata(ordered=True),
@@ -73,7 +73,7 @@ class Evaluator:
     # do NOT want to ship to the TPUs and instead just keep in host memory.
     # Typically ground-truth and metadata, that is often of string type.
     self.data_iter = big_vision.input_pipeline.start_global(
-        self.ds, devices, keep_on_cpu={"answer", "question_id"}
+        self.ds, devices, keep_on_cpu={"answer", "question_id"}  # type: ignore[arg-type]
     )
     # We'll need the tokenizer to detokenize the model outputs later.
     self.tok = big_vision.pp.tokenizer.get_tokenizer(tokenizer)

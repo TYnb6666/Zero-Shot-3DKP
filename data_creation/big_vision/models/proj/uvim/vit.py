@@ -324,7 +324,7 @@ class Model(nn.Module):
 def load(init_params, init_file, model_params=None, dont_load=()):
   """Loads params from init checkpoint and merges into init_params."""
   del model_params
-  ckpt = flax.core.unfreeze(utils.load_checkpoint(None, init_file))
+  ckpt = flax.core.unfreeze(utils.load_checkpoint(None, init_file))  # type: ignore[attr-defined]
   params = {"params": ckpt["params"], "state": ckpt["state"]}
   params = flax.training.checkpoints.convert_pre_linen(params)
   # Fix old-style param name.

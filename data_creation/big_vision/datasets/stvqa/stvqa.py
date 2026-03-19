@@ -47,7 +47,7 @@ Recommended training splits:
 import json
 import os
 
-from big_vision.datasets.stvqa import val_ids
+from big_vision.datasets.stvqa import val_ids  # type: ignore[attr-defined]
 import numpy as np
 import tensorflow_datasets as tfds
 

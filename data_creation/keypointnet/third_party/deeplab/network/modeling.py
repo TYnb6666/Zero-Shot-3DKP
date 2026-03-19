@@ -40,8 +40,8 @@ def _segm_mobilenet(name, backbone_name, num_classes, output_stride, pretrained_
     # rename layers
     backbone.low_level_features = backbone.features[0:4]
     backbone.high_level_features = backbone.features[4:-1]
-    backbone.features = None
-    backbone.classifier = None
+    backbone.features = None  # type: ignore[attr-defined]
+    backbone.classifier = None  # type: ignore[attr-defined]
 
     inplanes = 320
     low_level_planes = 24

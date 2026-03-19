@@ -74,8 +74,8 @@ def get_config(arg=None):
   c.model_name = 'proj.paligemma.paligemma'
   c.model = {}
   # TODO: b/lbeyer - no scan and no remat might be better on 1-GPU machines?
-  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)
-  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)
+  c.model.img = dict(variant='So400m/14', pool_type='none', scan=True)  # type: ignore[attr-defined]
+  c.model.llm = dict(vocab_size=256_000 + 1024 + 128, dropout=0.0)  # type: ignore[attr-defined]
   c.model_init = f'pt_{c.res}'
 
   # FSDP strategy.

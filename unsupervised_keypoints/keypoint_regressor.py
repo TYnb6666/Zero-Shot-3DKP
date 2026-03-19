@@ -35,31 +35,31 @@ def find_best_indices(
         from datasets.celeba import CelebA
         dataset = CelebA(split="train", dataset_loc=dataset_loc, align = False)
     elif dataset_name == "cub_aligned":
-        from datasets import cub
+        from datasets import cub  # type: ignore[attr-defined]
         dataset = cub.TrainSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "cub_001":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train", single_class=1)
     elif dataset_name == "cub_002":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train", single_class=2)
     elif dataset_name == "cub_003":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train", single_class=3)
     elif dataset_name == "cub_all":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train")
     elif dataset_name == "taichi":
-        from datasets import taichi
+        from datasets import taichi  # type: ignore[attr-defined]
         dataset = taichi.TrainSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "human3.6m":
-        from datasets import human36m
+        from datasets import human36m  # type: ignore[attr-defined]
         dataset = human36m.TrainSet(data_root=dataset_loc, validation=validation)
     elif dataset_name == "unaligned_human3.6m":
-        from datasets import unaligned_human36m
+        from datasets import unaligned_human36m  # type: ignore[attr-defined]
         dataset = unaligned_human36m.TrainSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "deepfashion":
-        from datasets import deepfashion
+        from datasets import deepfashion  # type: ignore[attr-defined]
         dataset = deepfashion.TrainSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "custom":
         from . import custom_images
@@ -155,31 +155,31 @@ def precompute_all_keypoints(
         from datasets.celeba import CelebA
         dataset = CelebA(split="train", dataset_loc=dataset_loc, align = False)
     elif dataset_name == "cub_aligned":
-        from datasets import cub
+        from datasets import cub  # type: ignore[attr-defined]
         dataset = cub.TrainRegSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "cub_001":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train", single_class=1)
     elif dataset_name == "cub_002":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train", single_class=2)
     elif dataset_name == "cub_003":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train", single_class=3)
     elif dataset_name == "cub_all":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="train")
     elif dataset_name == "taichi":
-        from datasets import taichi
+        from datasets import taichi  # type: ignore[attr-defined]
         dataset = taichi.TrainRegSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "human3.6m":
-        from datasets import human36m
+        from datasets import human36m  # type: ignore[attr-defined]
         dataset = human36m.TrainRegSet(data_root=dataset_loc, validation=validation)
     elif dataset_name == "unaligned_human3.6m":
-        from datasets import unaligned_human36m
+        from datasets import unaligned_human36m  # type: ignore[attr-defined]
         dataset = unaligned_human36m.TrainRegSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "deepfashion":
-        from datasets import deepfashion
+        from datasets import deepfashion  # type: ignore[attr-defined]
         dataset = deepfashion.TrainRegSet(data_root=dataset_loc, image_size=512)
     else:
         raise NotImplementedError

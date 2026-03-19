@@ -71,7 +71,7 @@ class Evaluator:
   def __init__(self, predict_fn, data, pp_fn, batch_size,
                use_global_batch, cache_final=True,
                cache_raw=False, prefetch=1, label_key="labels"):
-    data = ds_core.get(**data)
+    data = ds_core.get(**data)  # type: ignore[call-overload]
     pp_fn = pp_builder.get_preprocess_fn(pp_fn)
     self.ds, self.steps = input_pipeline.make_for_inference(
         data.get_tfdata(ordered=True), pp_fn, batch_size,

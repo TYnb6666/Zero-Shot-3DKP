@@ -122,8 +122,8 @@ class TextVqa(tfds.core.GeneratorBasedBuilder):
       rot = pd.read_csv(os.path.join(_FILEPATH, image_dir, _ROTATION_CSV))
       rotation_by_id = {}
       for row in rot.itertuples():
-        rotation = int(row.Rotation) if not np.isnan(row.Rotation) else 0
-        rotation_by_id[row.ImageID] = rotation
+        rotation = int(row.Rotation) if not np.isnan(row.Rotation) else 0  # type: ignore[attr-defined]
+        rotation_by_id[row.ImageID] = rotation  # type: ignore[attr-defined]
 
       examples = {}
       for v in data:

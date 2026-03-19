@@ -117,19 +117,19 @@ def main(argv):
   chrono = u.Chrono()
 
   write_note("Initializing train dataset...")
-  train_ds = input_pipeline.make_for_train(
-      dataset=config.dataset,
-      split=config.train_split,
+  train_ds = input_pipeline.make_for_train(  # type: ignore[call-overload]
+      dataset=config.dataset,  # type: ignore[call-overload]
+      split=config.train_split,  # type: ignore[call-overload]
       batch_size=config.batch_size,
       preprocess_fn=pp_builder.get_preprocess_fn(config.pp_train),
       shuffle_buffer_size=config.get("shuffle_buffer_size"),
       cache_raw=config.get("cache_raw", False),
-      data_dir=fillin(config.get("dataset_dir")))
+      data_dir=fillin(config.get("dataset_dir")))  # type: ignore[call-overload]
 
   n_prefetch = config.get("prefetch_to_device", 1)
   train_iter = input_pipeline.start_input_pipeline(train_ds, n_prefetch)
 
-  ntrain_img = input_pipeline.get_num_examples(
+  ntrain_img = input_pipeline.get_num_examples(  # type: ignore[attr-defined]
       config.dataset, config.train_split,
       data_dir=fillin(config.get("dataset_dir")))
   steps_per_epoch = ntrain_img / batch_size
@@ -210,7 +210,7 @@ def main(argv):
         targets=labels, lr=learning_rate, **config.gsam)
     l, grads = jax.lax.pmean((l, grads), axis_name="batch")
     updates, opt = tx.update(grads, opt, params)
-    params = optax.apply_updates(params, updates)
+    params = optax.apply_updates(params, updates)  # type: ignore[attr-defined]
 
     gs = jax.tree_leaves(bv_optax.replace_frozen(config.schedule, grads, 0.))
     measurements["l2_grads"] = jnp.sqrt(sum(jnp.vdot(g, g) for g in gs))
@@ -246,7 +246,7 @@ def main(argv):
         "chrono": chrono.save(),
     }
     checkpoint_tree = jax.tree_structure(checkpoint)
-    loaded = u.load_checkpoint(checkpoint_tree, resume_checkpoint_path)
+    loaded = u.load_checkpoint(checkpoint_tree, resume_checkpoint_path)  # type: ignore[attr-defined]
     # bfloat16 type gets lost when data is saved to disk, so we recover it.
     checkpoint = jax.tree_map(u.recover_dtype, loaded)
     params_cpu, opt_cpu = checkpoint["params"], checkpoint["opt"]
@@ -262,7 +262,7 @@ def main(argv):
 
   write_note("Kicking off misc stuff...")
   first_step = bv_optax.get_count(opt_cpu)
-  chrono.inform(first_step, total_steps, batch_size, steps_per_epoch)
+  chrono.inform(first_step, total_steps, batch_size, steps_per_epoch)  # type: ignore[call-overload]
   prof = None  # Keeps track of start/stop of profiler state.
 
   write_note(f"Replicating...\n{chrono.note}")
@@ -305,7 +305,7 @@ def main(argv):
       for name, value in measurements.items():
         mw.measure(name, value[0])
       chrono.tick(step, mw.measure, write_note)
-      if not np.isfinite(l):
+      if not np.isfinite(l):  # type: ignore[call-overload, arg-type]
         error = (f"The loss became nan or inf somewhere within steps "
                  f"[{step - config.log_training_steps}, {step}]")
         break
@@ -329,7 +329,7 @@ def main(argv):
 
       ckpt = {"params": params_cpu, "opt": opt_cpu, "chrono": chrono.save()}
       checkpoint_writer = pool.apply_async(
-          u.save_checkpoint, (ckpt, save_checkpoint_path, copy_step))
+          u.save_checkpoint, (ckpt, save_checkpoint_path, copy_step))  # type: ignore[attr-defined]
       chrono.resume()
 
     for (name, evaluator, log_steps, prefix) in evaluators:
@@ -357,7 +357,7 @@ def main(argv):
   mw.close()
 
   # Make sure all hosts stay up until the end of main.
-  u.sync_all_hosts()
+  u.sync_all_hosts()  # type: ignore[attr-defined]
 
   # Before cleanup, as cleanup should only run for successful jobs.
   if error is not None:

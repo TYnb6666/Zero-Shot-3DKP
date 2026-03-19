@@ -69,7 +69,7 @@ class Evaluator:
 
     # Prepare data for each process and pad with zeros so all processes have the
     # same number of batches.
-    data = ds_core.get(**data)
+    data = ds_core.get(**data)  # type: ignore[call-overload]
     self.dataset, self.steps = input_pipeline.make_for_inference(
         data.get_tfdata(ordered=True), batch_size=batch_size,
         num_ex_per_process=data.num_examples_per_process(),

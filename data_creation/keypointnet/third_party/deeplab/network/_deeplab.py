@@ -170,10 +170,10 @@ def convert_to_separable_conv(module):
         new_module = AtrousSeparableConvolution(module.in_channels,
                                       module.out_channels, 
                                       module.kernel_size,
-                                      module.stride,
-                                      module.padding,
-                                      module.dilation,
-                                      module.bias)
+                                      module.stride,  # type: ignore[arg-type]
+                                      module.padding,  # type: ignore[arg-type]
+                                      module.dilation,  # type: ignore[arg-type]
+                                      module.bias)  # type: ignore[arg-type]
     for name, child in module.named_children():
         new_module.add_module(name, convert_to_separable_conv(child))
     return new_module

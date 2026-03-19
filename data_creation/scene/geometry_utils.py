@@ -190,7 +190,7 @@ def point_to_normal(view, points1, points2=None):
 
 def depth_to_normal(view, depth1, depth2=None):
     points = depths_to_points(view, depth1, depth2)
-    points = points[None] if depth2 is None else points
+    points = points[None] if depth2 is None else points  # type: ignore[call-overload, arg-type]
     return point_to_normal(view, *points)
 
 
@@ -252,12 +252,12 @@ def map_depth_and_normal_to_color(depth_map: torch.Tensor,
         torch.Tensor: Tensor containing the color information corresponding to the input depth map.
     """
     # Transform depth to world space
-    world_coords, ray_directions = depths_to_points(view=camera_view, depthmap1=depth_map, depthmap2=None, return_rays_d=True)
+    world_coords, ray_directions = depths_to_points(view=camera_view, depthmap1=depth_map, depthmap2=None, return_rays_d=True)  # type: ignore[misc]
     world_coords = world_coords.view(3, -1).permute(1, 0).unsqueeze(0)
-    world_coords = transform_points_view_to_world(world_coords, [camera_view]).squeeze(0)
+    world_coords = transform_points_view_to_world(world_coords, [camera_view]).squeeze(0)  # type: ignore[arg-type]
 
     ray_directions = ray_directions.permute(1, 0).unsqueeze(0) # ray_directions are in view space
-    image_plane_coords = transform_points_view_to_world(ray_directions, [camera_view]).squeeze(0) # we retrieve the image plane in world space
+    image_plane_coords = transform_points_view_to_world(ray_directions, [camera_view]).squeeze(0) # we retrieve the image plane in world space  # type: ignore[arg-type]
     view_directions = world_coords - image_plane_coords
     view_directions_norm = view_directions.norm(dim=-1, keepdim=True)
     view_directions_norm[view_directions_norm == 0] = epsilon
@@ -284,4 +284,4 @@ def map_depth_and_normal_to_color(depth_map: torch.Tensor,
         else:
             color_output[random_mask[i:i + chunk_size]] = color_chunk
     color_output = color_output.permute(1, 0)
-    return color_output.view(3, camera_view.image_height, camera_view.image_width)
+    return color_output.view(3, camera_view.image_height, camera_view.image_width)  # type: ignore[attr-defined]

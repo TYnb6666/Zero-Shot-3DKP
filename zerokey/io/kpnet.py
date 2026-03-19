@@ -413,25 +413,19 @@ class RefIO(KPNetIO):
              stores them in reference_global, and raises IOError to abort this mesh.
           4. If the caller sees True, normal execution continues (no exception).
         """
-        from zerokey.generators.patchalign3d import find_affine_transform
+        from zerokey.generators.patchalign3d import transform_to_mesh_space
 
         try:
             yield self.used_as_reference[class_title] >= self.max_reference_features
         except LookupError:
             with BytesIO(npz_file) as in_buffer:
                 kp = np.load(in_buffer, allow_pickle=True)
-                verts = mesh.verts_packed()
-                assert verts is not None
-                pts = verts[kp['sample_to_input_idx']]
-                points_sampled = torch.as_tensor(kp['points_sampled'], device=pts.device)
-                A, t = find_affine_transform(points_sampled, pts)
-                patch_centers = torch.as_tensor(kp['patch_centers'], device=pts.device)
-                patch_centers = patch_centers @ A.T + t
-                # Use projected features if available, otherwise fall back to raw embeddings
+                device = mesh.verts_packed().device  # type: ignore[union-attr]
+                patch_centers = transform_to_mesh_space(kp, mesh, device, centers_key='patch_centers')
                 patch_feat_data = kp.get('patch_feat', kp.get('patch_emb', None))
                 if patch_feat_data is None:
                     raise ValueError("Neither patch_feat nor patch_emb found in npz file")
-                patch_features = torch.as_tensor(patch_feat_data, device=pts.device)
+                patch_features = torch.as_tensor(patch_feat_data, device=device)
 
             indices, labels = KPNetEvaluator.find_nearest_idx(patch_centers.cpu().numpy(), keypoints)
             features = patch_features[indices]

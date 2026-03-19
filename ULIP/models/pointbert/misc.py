@@ -69,7 +69,7 @@ def fps(data, number):
     return fps_data
 
 def worker_init_fn(worker_id):
-    np.random.seed(np.random.get_state()[1][0] + worker_id)
+    np.random.seed(np.random.get_state()[1][0] + worker_id)  # type: ignore[arg-type]
 
 def build_lambda_sche(opti, config):
     if config.get('decay_step') is not None:
@@ -235,7 +235,7 @@ def get_ptcloud_img(ptcloud):
     fig = plt.figure(figsize=(8, 8))
 
     x, z, y = ptcloud.transpose(1, 0)
-    ax = fig.gca(projection=Axes3D.name, adjustable='box')
+    ax = fig.gca(projection=Axes3D.name, adjustable='box')  # type: ignore[call-overload]
     ax.axis('off')
     # ax.axis('scaled')
     ax.view_init(30, 45)
@@ -246,7 +246,7 @@ def get_ptcloud_img(ptcloud):
     ax.scatter(x, y, z, zdir='z', c=x, cmap='jet')
 
     fig.canvas.draw()
-    img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+    img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')  # type: ignore[attr-defined]
     img = img.reshape(fig.canvas.get_width_height()[::-1] + (3, ))
     return img
 

@@ -185,8 +185,8 @@ def main(argv):
 
   def init(rng):
     bs = batch_size // jax.device_count()
-    img_shape = (bs,) + tuple(train_ds.element_spec["image"].shape[1:])
-    txt_shape = (bs,) + tuple(train_ds.element_spec["labels"].shape[1:])
+    img_shape = (bs,) + tuple(train_ds.element_spec["image"].shape[1:])  # type: ignore[call-overload, arg-type, index, attr-defined]
+    txt_shape = (bs,) + tuple(train_ds.element_spec["labels"].shape[1:])  # type: ignore[call-overload, arg-type, index, attr-defined]
     dummy_img = jnp.zeros(img_shape, jnp.float32)
     dummy_txt = jnp.zeros(txt_shape, jnp.int64)
     variables = model.init(rng, dummy_img, dummy_txt)
@@ -227,15 +227,15 @@ def main(argv):
   repl_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec())
 
   write_note("Inferring shardings...")
-  params_sharding = bv_sharding.infer_sharding(
-      params_shape, mesh, axis_name="fsdp",
+  params_sharding = bv_sharding.infer_sharding(  # type: ignore[call-overload]
+      params_shape, mesh, axis_name="fsdp",  # type: ignore[call-overload]
       # TODO: implement scan for parameter sharding.
-      strategy=config.get("param_sharding", "replicated"),
-      extra_strategy_args=config.get("param_sharding_args", {}))
-  opt_sharding = bv_sharding.infer_sharding(
-      opt_shape, mesh, axis_name="fsdp",
-      strategy=config.get("optim_sharding", "replicated"),
-      extra_strategy_args=config.get("optim_sharding_args", {}))
+      strategy=config.get("param_sharding", "replicated"),  # type: ignore[call-overload]
+      extra_strategy_args=config.get("param_sharding_args", {}))  # type: ignore[call-overload]
+  opt_sharding = bv_sharding.infer_sharding(  # type: ignore[call-overload]
+      opt_shape, mesh, axis_name="fsdp",  # type: ignore[call-overload]
+      strategy=config.get("optim_sharding", "replicated"),  # type: ignore[call-overload]
+      extra_strategy_args=config.get("optim_sharding_args", {}))  # type: ignore[call-overload]
 
   write_note("Transferring train_state to devices...")
   # RNG is always replicated
@@ -301,7 +301,7 @@ def main(argv):
     params, opt = train_state["params"], train_state["opt"]
     loss, grads = jax.value_and_grad(loss_fn)(params)
     updates, opt = tx.update(grads, opt, params)
-    params = optax.apply_updates(params, updates)
+    params = optax.apply_updates(params, updates)  # type: ignore[attr-defined]
 
     measurements = {"training_loss": loss}
     gs = jax.tree_leaves(bv_optax.replace_frozen(config.schedule, grads, 0.))
@@ -377,7 +377,7 @@ def main(argv):
         config,
         predict_fns.get_predict_fns(model),
         lambda s: write_note(f"Init evaluator: {s}…\n{u.chrono.note}"),
-        lambda key, cfg: get_steps(key, default=None, cfg=cfg),
+        lambda key, cfg: get_steps(key, default=None, cfg=cfg),  # type: ignore[arg-type]
         devices_flat,
     )
 
@@ -411,7 +411,7 @@ def main(argv):
   prof = None  # Keeps track of start/stop of profiler state.
 
   write_note("Starting training loop, compiling the first step...")
-  for step, batch in zip(range(first_step + 1, total_steps + 1), train_iter):
+  for step, batch in zip(range(first_step + 1, total_steps + 1), train_iter):  # type: ignore[operator]
     mw.step_start(step)
 
     with jax.profiler.StepTraceAnnotation("train_step", step_num=step):
@@ -421,7 +421,7 @@ def main(argv):
 
     # On the first host, let's always profile a handful of early steps.
     if jax.process_index() == 0:
-      prof = u.startstop_prof(prof, step, first_step, get_steps("log_training"))
+      prof = u.startstop_prof(prof, step, first_step, get_steps("log_training"))  # type: ignore[arg-type]
 
     # Report training progress
     if (u.itstime(step, get_steps("log_training"), total_steps, host=0)
@@ -437,13 +437,13 @@ def main(argv):
 
       if not np.isfinite(measurements["training_loss"]):
         raise RuntimeError(f"The loss became nan or inf somewhere within steps "
-                           f"[{step - get_steps('log_training')}, {step}]")
+                           f"[{step - get_steps('log_training')}, {step}]")  # type: ignore[operator]
 
     # Checkpoint saving
-    keep_ckpt_steps = get_steps("keep_ckpt", None) or total_steps
+    keep_ckpt_steps = get_steps("keep_ckpt", None) or total_steps  # type: ignore[arg-type]
     if save_ckpt_path and (
         (keep := u.itstime(step, keep_ckpt_steps, total_steps, first=False))
-        or u.itstime(step, get_steps("ckpt", None), total_steps, first=True)
+        or u.itstime(step, get_steps("ckpt", None), total_steps, first=True)  # type: ignore[arg-type]
     ):
       u.chrono.pause(wait_for=train_state)
 

@@ -22,7 +22,7 @@ import jax.numpy as jnp
 from absl.testing import absltest
 
 
-class AdaptorTest(googletest.TestCase):
+class AdaptorTest(googletest.TestCase):  # type: ignore[name-defined]
 
   def test_inversion(self):
     num_channels = 8
@@ -47,4 +47,4 @@ class AdaptorTest(googletest.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  googletest.main()  # type: ignore[name-defined]

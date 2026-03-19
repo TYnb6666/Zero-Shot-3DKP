@@ -31,7 +31,7 @@ class BuilderTest(tf.test.TestCase):
     pp_fn = builder.get_preprocess_fn("resize(256)")
     x = np.random.randint(0, 256, [640, 480, 3])
     image = pp_fn({"image": x})["image"]
-    self.assertEqual(image.numpy().shape, (256, 256, 3))
+    self.assertEqual(image.numpy().shape, (256, 256, 3))  # type: ignore[attr-defined]
 
   def testEmpty(self):
     pp_fn = builder.get_preprocess_fn("||inception_crop|||resize(256)||")
@@ -39,7 +39,7 @@ class BuilderTest(tf.test.TestCase):
     # Typical image input
     x = np.random.randint(0, 256, [640, 480, 3])
     image = pp_fn({"image": x})["image"]
-    self.assertEqual(image.numpy().shape, (256, 256, 3))
+    self.assertEqual(image.numpy().shape, (256, 256, 3))  # type: ignore[attr-defined]
 
   def testPreprocessingPipeline(self):
     pp_str = ("inception_crop|resize(256)|resize((256, 256))|"
@@ -50,9 +50,9 @@ class BuilderTest(tf.test.TestCase):
     # Typical image input
     x = np.random.randint(0, 256, [640, 480, 3])
     image = pp_fn({"image": x})["image"]
-    self.assertEqual(image.numpy().shape, (80, 120, 3))
-    self.assertLessEqual(np.max(image.numpy()), 1)
-    self.assertGreaterEqual(np.min(image.numpy()), -1)
+    self.assertEqual(image.numpy().shape, (80, 120, 3))  # type: ignore[attr-defined]
+    self.assertLessEqual(np.max(image.numpy()), 1)  # type: ignore[attr-defined]
+    self.assertGreaterEqual(np.min(image.numpy()), -1)  # type: ignore[attr-defined]
 
   def testNumArgsException(self):
 

@@ -41,7 +41,7 @@ def get_config(arg='split=sweep'):
   config = ConfigDict()
 
   config.input = {}
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       f'decode|nyu_depth|'
       f'randu("fliplr")|det_fliplr(key="image")|det_fliplr(key="labels")|'
       f'inception_box|crop_box(key="image")|crop_box(key="labels")|'
@@ -72,9 +72,9 @@ def get_config(arg='split=sweep'):
       f'keep("cond_image", "ground_truth", "image/id")'
   )
 
-  config.input.data = dict(name='nyu_depth_v2', split='train')
-  config.input.batch_size = 512
-  config.input.shuffle_buffer_size = 50_000
+  config.input.data = dict(name='nyu_depth_v2', split='train')  # type: ignore[attr-defined]
+  config.input.batch_size = 512  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 50_000  # type: ignore[attr-defined]
 
   config.total_epochs = 50
 
@@ -151,17 +151,17 @@ def get_config(arg='split=sweep'):
 
   # Evaluation section
   config.evals = {}
-  config.evals.val = ConfigDict()
-  config.evals.val.type = 'mean'
-  config.evals.val.pred = 'validation'
-  config.evals.val.data = {**config.input.data}
-  config.evals.val.data.split = 'validation'
-  config.evals.val.pp_fn = pp_eval
-  config.evals.val.log_steps = 250
+  config.evals.val = ConfigDict()  # type: ignore[attr-defined]
+  config.evals.val.type = 'mean'  # type: ignore[attr-defined]
+  config.evals.val.pred = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.data = {**config.input.data}  # type: ignore[attr-defined]
+  config.evals.val.data.split = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.pp_fn = pp_eval  # type: ignore[attr-defined]
+  config.evals.val.log_steps = 250  # type: ignore[attr-defined]
 
   base = {
       'type': 'proj.givt.nyu_depth',
-      'data': {**config.input.data},
+      'data': {**config.input.data},  # type: ignore[attr-defined]
       'pp_fn': pp_predict,
       'pred': 'sample_depth',
       'log_steps': 2000,
@@ -169,26 +169,26 @@ def get_config(arg='split=sweep'):
       'max_depth': MAX_DEPTH,
   }
 
-  config.evals.nyu_depth_val = dict(base)
-  config.evals.nyu_depth_val.data.split = 'validation'
+  config.evals.nyu_depth_val = dict(base)  # type: ignore[attr-defined]
+  config.evals.nyu_depth_val.data.split = 'validation'  # type: ignore[attr-defined]
 
-  config.evals.save_pred = dict(base)
-  config.evals.save_pred.type = 'proj.givt.save_predictions'
-  del config.evals.save_pred.min_depth, config.evals.save_pred.max_depth
-  config.evals.save_pred.log_steps = 100_000
-  config.evals.save_pred.data.split = 'validation[:128]'
-  config.evals.save_pred.outfile = 'inference.npz'
+  config.evals.save_pred = dict(base)  # type: ignore[attr-defined]
+  config.evals.save_pred.type = 'proj.givt.save_predictions'  # type: ignore[attr-defined]
+  del config.evals.save_pred.min_depth, config.evals.save_pred.max_depth  # type: ignore[attr-defined, misc]
+  config.evals.save_pred.log_steps = 100_000  # type: ignore[attr-defined]
+  config.evals.save_pred.data.split = 'validation[:128]'  # type: ignore[attr-defined]
+  config.evals.save_pred.outfile = 'inference.npz'  # type: ignore[attr-defined]
 
   config.eval_only = False
   config.seed = 0
 
   if arg.runlocal:
-    config.input.batch_size = 4
-    config.input.shuffle_buffer_size = 10
-    config.evals.val.log_steps = 20
-    config.evals.val.data.split = 'validation[:4]'
-    config.evals.nyu_depth_val.data.split = 'validation[:4]'
-    config.evals.save_pred.data.split = 'validation[:4]'
+    config.input.batch_size = 4  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
+    config.evals.val.log_steps = 20  # type: ignore[attr-defined]
+    config.evals.val.data.split = 'validation[:4]'  # type: ignore[attr-defined]
+    config.evals.nyu_depth_val.data.split = 'validation[:4]'  # type: ignore[attr-defined]
+    config.evals.save_pred.data.split = 'validation[:4]'  # type: ignore[attr-defined]
     config.model.update(VTT_MODELS['base'])
     del config.model_init
     for k in config.evals.keys():

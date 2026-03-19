@@ -130,7 +130,7 @@ def get_make_canonical(random=False, main_sort_axis="y"):
     # Now, all 0 and neg. ids have collapsed to -1. Thus, we recover 0 id from
     # the original mask.
     can_mask = tf.where(instimg == 0, 0, can_mask)
-    return tf.concat([image[..., :-1], can_mask[..., None]], axis=-1)
+    return tf.concat([image[..., :-1], can_mask[..., None]], axis=-1)  # type: ignore[arg-type]
 
   return _make_canonical
 

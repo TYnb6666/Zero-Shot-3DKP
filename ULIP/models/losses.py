@@ -45,18 +45,18 @@ class ULIPWithImageLoss(nn.Module):
         logits_per_pc_image = logit_scale * pc_embed @ image_embed_all.t()
         logits_per_image_pc = logit_scale * image_embed @ pc_embed_all.t()
 
-        loss = (F.cross_entropy(logits_per_pc_text, self.labels) + \
-                F.cross_entropy(logits_per_text_pc, self.labels)) / 2 + \
-                (F.cross_entropy(logits_per_pc_image, self.labels) + F.cross_entropy(logits_per_image_pc, self.labels)) / 2
+        loss = (F.cross_entropy(logits_per_pc_text, self.labels) + \  # type: ignore[arg-type]
+                F.cross_entropy(logits_per_text_pc, self.labels)) / 2 + \  # type: ignore[arg-type]
+                (F.cross_entropy(logits_per_pc_image, self.labels) + F.cross_entropy(logits_per_image_pc, self.labels)) / 2  # type: ignore[arg-type]
 
         # compute accuracy
         with torch.no_grad():
             pred = torch.argmax(logits_per_pc_text, dim=-1)
-            correct = pred.eq(self.labels).sum()
+            correct = pred.eq(self.labels).sum()  # type: ignore[call-overload, arg-type]
             pc_text_acc = 100 * correct / local_batch_size
 
             pred = torch.argmax(logits_per_pc_image, dim=-1)
-            correct = pred.eq(self.labels).sum()
+            correct = pred.eq(self.labels).sum()  # type: ignore[call-overload, arg-type]
             pc_image_acc = 100 * correct / local_batch_size
 
         return {'loss': loss, 'ulip_loss': loss, 'ulip_pc_image_acc': pc_image_acc, 'ulip_pc_text_acc': pc_text_acc}

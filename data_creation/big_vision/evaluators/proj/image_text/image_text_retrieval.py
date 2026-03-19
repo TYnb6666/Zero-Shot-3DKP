@@ -40,10 +40,10 @@ def text_to_image_retrieval_eval(
     A dictionary with the Recall@k scores for k in RECALL_THRESHOLDS.
   """
   per_text_ranks = dist_matrix.argsort(axis=0)
-  text_image_correspondence = np.array(text_image_correspondence)
+  text_image_correspondence = np.array(text_image_correspondence)  # type: ignore[assignment]
 
   def recall_at(k):
-    wins = per_text_ranks[:k, :] == text_image_correspondence[None]
+    wins = per_text_ranks[:k, :] == text_image_correspondence[None]  # type: ignore[call-overload, arg-type]
     return wins.any(axis=0).mean()
 
   return {
@@ -72,12 +72,12 @@ def image_to_text_retrieval_eval(
     A dictionary with the Recall@k scores for k in RECALL_THRESHOLDS.
   """
   per_image_ranks = dist_matrix.argsort(axis=1)
-  text_image_correspondence = np.array(text_image_correspondence)
+  text_image_correspondence = np.array(text_image_correspondence)  # type: ignore[assignment]
 
   def recall_at(k):
     top_k_images = text_image_correspondence[per_image_ranks[:, :k]]
     wins = top_k_images == np.arange(len(per_image_ranks))[:, None]
-    return wins.any(axis=1).mean()
+    return wins.any(axis=1).mean()  # type: ignore[attr-defined]
 
   return {
       f'Recall@{k}': recall_at(k)

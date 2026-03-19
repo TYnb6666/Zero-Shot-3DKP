@@ -82,6 +82,6 @@ def get_config():
 
   # Few-shot eval section
   config.evals = {}
-  config.evals.fewshot = dict(log_steps=10_000, **get_fewshot_lsr())
+  config.evals.fewshot = dict(log_steps=10_000, **get_fewshot_lsr())  # type: ignore[attr-defined]
 
   return config

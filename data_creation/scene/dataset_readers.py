@@ -26,11 +26,11 @@ from .graphics_utils import BasicPointCloud
 
 class CameraInfo(NamedTuple):
     uid: int
-    R: np.array
-    T: np.array
-    FovY: np.array
-    FovX: np.array
-    image: np.array
+    R: np.array  # type: ignore[misc]
+    T: np.array  # type: ignore[misc]
+    FovY: np.array  # type: ignore[misc]
+    FovX: np.array  # type: ignore[misc]
+    image: np.array  # type: ignore[misc]
     image_path: str
     image_name: str
     width: int
@@ -241,7 +241,7 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
     except:
         pcd = None
 
-    scene_info = SceneInfo(point_cloud=pcd,
+    scene_info = SceneInfo(point_cloud=pcd,  # type: ignore[arg-type]
                            train_cameras=train_cam_infos,
                            test_cameras=test_cam_infos,
                            nerf_normalization=nerf_normalization,

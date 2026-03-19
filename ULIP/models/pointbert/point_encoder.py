@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from timm.models.layers import DropPath
+from timm.models.layers import DropPath  # type: ignore[attr-defined]
 from ULIP.models.pointbert.dvae import Group
 from ULIP.models.pointbert.dvae import Encoder
 from ULIP.models.pointbert.logger import print_log
@@ -145,7 +145,7 @@ class PointTransformer(nn.Module):
         self.blocks = TransformerEncoder(
             embed_dim=self.trans_dim,
             depth=self.depth,
-            drop_path_rate=dpr,
+            drop_path_rate=dpr,  # type: ignore[arg-type]
             num_heads=self.num_heads
         )
 
@@ -270,7 +270,7 @@ class PointTransformer_Colored(nn.Module):
         self.blocks = TransformerEncoder(
             embed_dim=self.trans_dim,
             depth=self.depth,
-            drop_path_rate=dpr,
+            drop_path_rate=dpr,  # type: ignore[arg-type]
             num_heads=self.num_heads
         )
 

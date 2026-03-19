@@ -40,20 +40,20 @@ def get_config():
   config.loss = 'softmax_xent'
 
   config.input = {}
-  config.input.data = dict(
+  config.input.data = dict(  # type: ignore[attr-defined]
       name='imagenet2012',
       split='train[:99%]',
   )
-  config.input.batch_size = 1024
-  config.input.cache_raw = True  # Needs up to 120GB of RAM!
-  config.input.shuffle_buffer_size = 250_000
+  config.input.batch_size = 1024  # type: ignore[attr-defined]
+  config.input.cache_raw = True  # Needs up to 120GB of RAM!  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 250_000  # type: ignore[attr-defined]
 
   pp_common = (
       '|value_range(-1, 1)'
       '|onehot(1000, key="{lbl}", key_result="labels")'
       '|keep("image", "labels")'
   )
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       'decode_jpeg_and_inception_crop(224)|flip_lr|randaug(2,10)' +
       pp_common.format(lbl='label')
   )
@@ -95,11 +95,11 @@ def get_config():
         log_steps=2500,  # Very fast O(seconds) so it's fine to run it often.
     )
   config.evals = {}
-  config.evals.train = get_eval('train[:2%]')
-  config.evals.minival = get_eval('train[99%:]')
-  config.evals.val = get_eval('validation')
-  config.evals.v2 = get_eval('test', dataset='imagenet_v2')
-  config.evals.real = get_eval('validation', dataset='imagenet2012_real')
-  config.evals.real.pp_fn = pp_eval.format(lbl='real_label')
+  config.evals.train = get_eval('train[:2%]')  # type: ignore[attr-defined]
+  config.evals.minival = get_eval('train[99%:]')  # type: ignore[attr-defined]
+  config.evals.val = get_eval('validation')  # type: ignore[attr-defined]
+  config.evals.v2 = get_eval('test', dataset='imagenet_v2')  # type: ignore[attr-defined]
+  config.evals.real = get_eval('validation', dataset='imagenet2012_real')  # type: ignore[attr-defined]
+  config.evals.real.pp_fn = pp_eval.format(lbl='real_label')  # type: ignore[attr-defined]
 
   return config

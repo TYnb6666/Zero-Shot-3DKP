@@ -43,6 +43,17 @@ pixi install
 pixi run zerokey --help
 ```
 
+### Type Checking
+
+The entire codebase passes [pyright](https://github.com/microsoft/pyright) with zero errors under `basic` type checking mode:
+
+```bash
+# Run type checker (requires dev environment)
+pixi run -e dev pyright
+```
+
+Configuration is in `pyrightconfig.json` (Python 3.13, `typeCheckingMode: "basic"`).
+
 ---
 
 ## Configuration

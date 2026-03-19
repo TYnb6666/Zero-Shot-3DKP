@@ -9,8 +9,8 @@ from torchvision.transforms import InterpolationMode
 from torchvision.transforms.functional import convert_image_dtype
 
 from transformers.image_utils import (
-    OPENAI_CLIP_MEAN,
-    OPENAI_CLIP_STD,
+    OPENAI_CLIP_MEAN,  # type: ignore[attr-defined]
+    OPENAI_CLIP_STD,  # type: ignore[attr-defined]
     ImageInput,
     is_valid_image,
 )
@@ -144,8 +144,8 @@ class MolmoImageProcessor(BaseImageProcessor):
     def __init__(
         self,
         max_crops: int = 12,
-        overlap_margins: List[int] = (4, 4),
-        base_image_input_size: List[int] = (336, 336),
+        overlap_margins: List[int] = (4, 4),  # type: ignore[assignment]
+        base_image_input_size: List[int] = (336, 336),  # type: ignore[assignment]
         image_token_length_w: int = 12,
         image_token_length_h: int = 12,
         image_patch_size: int = 14,
@@ -182,14 +182,20 @@ class MolmoImageProcessor(BaseImageProcessor):
         image_patch_size: Optional[int] = None,
     ):
         if isinstance(base_image_input_size, int):
-            base_image_input_size = (base_image_input_size, base_image_input_size)
+            base_image_input_size = [base_image_input_size, base_image_input_size]
+
+        assert image_patch_size is not None
+        assert image_token_length_w is not None
+        assert image_token_length_h is not None
+        assert isinstance(base_image_input_size, list)
+        assert overlap_margins is not None
 
         base_image_input_d = image_patch_size
         tokens_per_image = image_token_length_w * image_token_length_h
         image_base_patch_w = base_image_input_size[1] // base_image_input_d
         image_base_patch_h = base_image_input_size[0] // base_image_input_d
 
-        original_image_h, original_image_w = image.shape[:2]
+        original_image_h, original_image_w = image.shape[:2]  # type: ignore[union-attr]
         crop_size = base_image_input_size[0]
 
         # Discard this many patches from the (left/top, right/bottom) of crops
@@ -359,7 +365,8 @@ class MolmoImageProcessor(BaseImageProcessor):
         image_token_length_h: Optional[int] = None,
     ):
         """Converts `patch_order` into a mapping of token_id -> patch_id"""
-
+        assert image_token_length_w is not None
+        assert image_token_length_h is not None
         tokens_per_image = image_token_length_w * image_token_length_h
         if no_image is not None and no_image:
             return np.zeros((0, tokens_per_image), np.int32)

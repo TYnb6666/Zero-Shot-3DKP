@@ -26,7 +26,7 @@ def read_pcd(filename):
             # for some reason pcl adds empty space at the end of files
             buf = f.read(rowstep)
 
-            pc_data = np.fromstring(buf, dtype=dtype)
+            pc_data = np.fromstring(buf, dtype=dtype)  # type: ignore[misc]
 
         elif metadata['data'] == 'binary_compressed':
             raise NotImplementedError("Go ask PCD why they use lzf compression.")

@@ -14,8 +14,8 @@ Usage::
 
 from __future__ import annotations
 
-from io import BytesIO
-from typing import Any, BinaryIO, Dict, Optional, Sequence, Union
+from io import BytesIO, IOBase
+from typing import Any, BinaryIO, Dict, Optional, Sequence, Tuple, Union
 
 from zerokey._defaults import POINTBERT_CKPT
 
@@ -28,14 +28,15 @@ import sys
 from pathlib import Path
 import torch
 import fire
+from zerokey.models.molmo import Molmo
 
 
-class PatchExplorer:
-    """Explore point cloud patches with text-based CLIP matching.
+class PatchExplorer(Molmo):
+    """Explore point cloud patches with text-based matching.
 
-    Loads a CLIP model on construction and provides methods to extract
-    patch features from a 3D model, analyse them, and match patches to
-    natural-language queries.
+    Inherits from Molmo so that zerokey mode can use both PatchExplorer
+    feature extraction and Molmo MLLM detection through a single object.
+    Pass ``molmo=True`` to also initialize the Molmo VLM.
     """
 
     def __init__(
@@ -43,6 +44,7 @@ class PatchExplorer:
         clip_model: str = 'ViT-bigG-14',
         clip_pretrained: str = 'laion2b_s39b_b160k',
         cuda_device: str | int = '0',
+        molmo: bool = False,
     ) -> None:
         """Initialise the explorer and load the CLIP text encoder.
 
@@ -50,8 +52,11 @@ class PatchExplorer:
             clip_model: OpenCLIP model architecture name.
             clip_pretrained: Pretrained weights tag for *clip_model*.
             cuda_device: CUDA device identifier (e.g. ``'0'`` or ``'cuda:0'``).
+            molmo: If True, also initialize the Molmo VLM for keypoint detection.
         """
-        # Normalise '0' → 'cuda:0'; torch.device('0') is invalid
+        if molmo:
+            Molmo.__init__(self)
+        # Normalise '0' -> 'cuda:0'; torch.device('0') is invalid
         if isinstance(cuda_device, str) and cuda_device.isdigit():
             cuda_device = f'cuda:{cuda_device}'
         self.device = torch.device(cuda_device)
@@ -77,7 +82,7 @@ class PatchExplorer:
             backend='clip',
             clip_model=clip_model_obj,
             tokenizer=tokenizer,
-            text_dim=clip_dim
+            text_dim=int(clip_dim)
         )
 
         print(f"Device: {self.device}")
@@ -90,7 +95,7 @@ class PatchExplorer:
 
     def extract(
         self,
-        input: Union[str, os.PathLike, BinaryIO],
+        input: Union[str, os.PathLike[str], IOBase],
         ckpt: Union[str, os.PathLike] = POINTBERT_CKPT,
         output: Optional[Union[str, os.PathLike]] = None,
         arch: str = 'pointtransformer',
@@ -240,7 +245,7 @@ class PatchExplorer:
 
     def match(
         self,
-        npz_file: str | bytes | os.PathLike[str] | BinaryIO,
+        npz_file: str | bytes | os.PathLike[str] | BinaryIO | IOBase,
         query: str,
         top_k: int = 10,
         show_plots: bool = True,
@@ -293,7 +298,7 @@ class PatchExplorer:
 
         # Encode text
         with torch.no_grad():
-            text_feat = self.text_cache.encode_label_for_sample(query, category, setting="part_only", initial_texts=hints)
+            text_feat = self.text_cache.encode_label_for_sample(query, category, setting="part_only", initial_texts=tuple(hints))
             text_feat = text_feat.to(self.device)
 
         print(f"✓ Text encoded: shape={text_feat.shape}, norm={torch.norm(text_feat).item():.4f}")
@@ -357,7 +362,8 @@ class PatchExplorer:
             Dictionary containing match results (see :meth:`match`).
         """
         # Extract patches
-        npz_file = self.extract(input=input, ckpt=ckpt, output=output)
+        npz_result = self.extract(input=input, ckpt=ckpt, output=output)
+        npz_file: Union[str, BytesIO] = BytesIO(npz_result) if isinstance(npz_result, bytes) else npz_result
 
         # Match query
         results = self.match(npz_file=npz_file, query=query, top_k=top_k, show_plots=show_plots)

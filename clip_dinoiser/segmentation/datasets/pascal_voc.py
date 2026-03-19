@@ -27,7 +27,7 @@ class PascalVOCDataset(BaseSegDataset):
         super(PascalVOCDataset, self).__init__(
             img_suffix='.jpg',
             seg_map_suffix='.png',
-            split=split,
+            split=split,  # type: ignore[call-arg]
             reduce_zero_label=False,
             **kwargs)
-        assert os.path.exists(self.img_dir) and self.split is not None
+        assert os.path.exists(self.img_dir) and self.split is not None  # type: ignore[attr-defined]

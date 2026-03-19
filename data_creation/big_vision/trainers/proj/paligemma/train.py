@@ -374,7 +374,7 @@ def main(argv):
     params, opt = train_state["params"], train_state["opt"]
     (_, measurements), grads = jax.value_and_grad(loss_fn, has_aux=True)(params)
     updates, opt = tx.update(grads, opt, params)
-    params = optax.apply_updates(params, updates)
+    params = optax.apply_updates(params, updates)  # type: ignore[attr-defined]
 
     gs = jax.tree.leaves(bv_optax.replace_frozen(config.schedule, grads, 0.))
     measurements["l2_grads"] = jnp.sqrt(sum([jnp.sum(g * g) for g in gs]))
@@ -398,7 +398,7 @@ def main(argv):
         config,
         predict_fns.get_all(model),
         lambda s: write_note(f"Init evaluator: {s}…\n{u.chrono.note}"),
-        lambda key, cfg: get_steps(key, default=None, cfg=cfg),
+        lambda key, cfg: get_steps(key, default=None, cfg=cfg),  # type: ignore[arg-type]
         devices_flat,
     )
 
@@ -433,7 +433,7 @@ def main(argv):
   ckpt_mngr = None
 
   write_note("Starting training loop, compiling the first step...")
-  for step, batch in zip(range(first_step + 1, total_steps + 1), train_iter):
+  for step, batch in zip(range(first_step + 1, total_steps + 1), train_iter):  # type: ignore[operator]
     mw.step_start(step)
 
     with jax.profiler.StepTraceAnnotation("train_step", step_num=step):
@@ -443,7 +443,7 @@ def main(argv):
 
     # On the first host, let's always profile a handful of early steps.
     if jax.process_index() == 0:
-      prof = u.startstop_prof(prof, step, first_step, get_steps("log_training"))
+      prof = u.startstop_prof(prof, step, first_step, get_steps("log_training"))  # type: ignore[arg-type]
 
     # Report training progress
     if (u.itstime(step, get_steps("log_training"), total_steps, host=0)
@@ -460,14 +460,14 @@ def main(argv):
       for k in ("training_loss", "l2_grads", "l2_updates", "l2_params"):
         if not np.isfinite(measurements.get(k, 0.0)):
           raise RuntimeError(f"{k} became nan or inf somewhere within steps "
-                             f"[{step - get_steps('log_training')}, {step}]")
+                             f"[{step - get_steps('log_training')}, {step}]")  # type: ignore[operator]
 
     # Checkpoint saving
-    keep_last = total_steps if get_steps("ckpt", None) else None
-    keep_ckpt_steps = get_steps("keep_ckpt", None) or keep_last
+    keep_last = total_steps if get_steps("ckpt", None) else None  # type: ignore[arg-type]
+    keep_ckpt_steps = get_steps("keep_ckpt", None) or keep_last  # type: ignore[arg-type]
     if save_ckpt_path and (
         (keep := u.itstime(step, keep_ckpt_steps, total_steps, first=False))
-        or u.itstime(step, get_steps("ckpt", None), total_steps, first=True)
+        or u.itstime(step, get_steps("ckpt", None), total_steps, first=True)  # type: ignore[arg-type]
     ):
       u.chrono.pause(wait_for=train_state)
 

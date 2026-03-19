@@ -53,23 +53,23 @@ def get_config(arg=None):
   config.input = {}
   if arg.test_with_coco:
     # Use COCO Captions for sanity-checking
-    config.input.data = dict(name='coco_captions', split='train')
-    val_data = dict(config.input.data)
+    config.input.data = dict(name='coco_captions', split='train')  # type: ignore[attr-defined]
+    val_data = dict(config.input.data)  # type: ignore[attr-defined]
     val_data['split'] = 'val'
-    config.input.batch_size = 4000 if not arg.runlocal else 32
-    config.input.shuffle_buffer_size = 50_000  if not arg.runlocal else 50
+    config.input.batch_size = 4000 if not arg.runlocal else 32  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 50_000  if not arg.runlocal else 50  # type: ignore[attr-defined]
     config.total_steps = 400 if not arg.runlocal else 10
   else:
     # Please add your favorite image/alt-text dataset here
-    config.input.data = None
+    config.input.data = None  # type: ignore[attr-defined]
     val_data = None
-    assert config.input.data is not None and val_data is not None, (
-        config.input.data, val_data)
+    assert config.input.data is not None and val_data is not None, (  # type: ignore[attr-defined]
+        config.input.data, val_data)  # type: ignore[attr-defined]
 
     # The value in the paper is 10 * 1024, which requires 128 TPUv3 cores or a
     # memory optimized ViT implementation when running on 128 TPUv2 cores.
-    config.input.batch_size = 8 * 1024 if not arg.runlocal else 32
-    config.input.shuffle_buffer_size = 250_000  if not arg.runlocal else 50
+    config.input.batch_size = 8 * 1024 if not arg.runlocal else 32  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 250_000  if not arg.runlocal else 50  # type: ignore[attr-defined]
     config.total_steps = 100_000 if not arg.runlocal else 10
 
   def tokenizer(inkey, outkey='labels'):
@@ -88,11 +88,11 @@ def get_config(arg=None):
     # Train with augmentation when sanity-checking
     pp_image_aug = (
         f'decode|resize({arg.res})|flip_lr|randaug(2,10)|value_range(-1,1)')
-    config.input.pp = pp_eval = (
+    config.input.pp = pp_eval = (  # type: ignore[attr-defined]
         f'{pp_image_aug}|flatten|{tokenizer("captions/text")}|'
         f'keep("image", "labels")')
   else:
-    config.input.pp = pp_eval = (
+    config.input.pp = pp_eval = (  # type: ignore[attr-defined]
         f'{pp_image}|flatten|{tokenizer("text")}|keep("image", "labels")')
 
   config.pp_modules = [
@@ -154,12 +154,12 @@ def get_config(arg=None):
   )
   config.evals = {}
   sub = '[:4]' if arg.runlocal else ''
-  config.evals.val = {
+  config.evals.val = {  # type: ignore[attr-defined]
       **eval_common,
       'data': val_data,
       'pp_fn': pp_eval,
   }
-  config.evals.coco = {
+  config.evals.coco = {  # type: ignore[attr-defined]
       **eval_common,
       'data': dict(name='coco_captions', split=f'val{sub}'),
       'pp_fn': (
@@ -170,29 +170,29 @@ def get_config(arg=None):
   if arg.i1k_eval:
     # Requires manual download, see
     # https://github.com/google-research/big_vision#preparing-tfds-data
-    config.evals.imagenet = {
+    config.evals.imagenet = {  # type: ignore[attr-defined]
         **eval_common,
         'data': dict(name='imagenet2012', split=f'validation{sub}'),
         'pp_fn': (
             f'{pp_image}|clip_i1k_label_names|'
             f'{tokenizer("labels")}|keep("image", "labels")'),
     }
-    config.evals.disclf = dict(
+    config.evals.disclf = dict(  # type: ignore[attr-defined]
         type='proj.image_text.discriminative_classifier',
         pp_txt=tokenizer('texts', 'labels'),
         prefix='z/0shot/',
         log_steps=5_000 if not arg.runlocal else 5)
 
-  config.evals.retrieval_coco = common.get_coco(
+  config.evals.retrieval_coco = common.get_coco(  # type: ignore[attr-defined]
       pp_img=f'resize({arg.res})|value_range(-1, 1)',
       pp_txt=tokenizer('texts'),
       log_steps=5_000 if not arg.runlocal else 5,
   )
 
   # Few-shot  metrics
-  config.evals.fewshot = get_fewshot_lsr()
-  config.evals.fewshot.log_steps = 5_000 if not arg.runlocal else 5
-  config.evals.fewshot.representation_layer = 'img/pre_logits'
+  config.evals.fewshot = get_fewshot_lsr()  # type: ignore[attr-defined]
+  config.evals.fewshot.log_steps = 5_000 if not arg.runlocal else 5  # type: ignore[attr-defined]
+  config.evals.fewshot.representation_layer = 'img/pre_logits'  # type: ignore[attr-defined]
 
   config.seed = 0
 

@@ -10,7 +10,7 @@ from PIL import Image
 #
 #  Extended Transforms for Semantic Segmentation
 #
-class ExtRandomHorizontalFlip(object):
+class ExtRandomHorizontalFlip(object):  # type: ignore[no-redef]
     """Horizontally flip the given PIL Image randomly with a given probability.
 
     Args:
@@ -75,7 +75,7 @@ class ExtCenterCrop(object):
 
     def __init__(self, size):
         if isinstance(size, numbers.Number):
-            self.size = (int(size), int(size))
+            self.size = (int(size), int(size))  # type: ignore[arg-type]
         else:
             self.size = size
 
@@ -86,14 +86,14 @@ class ExtCenterCrop(object):
         Returns:
             PIL Image: Cropped image.
         """
-        return F.center_crop(img, self.size), F.center_crop(lbl, self.size)
+        return F.center_crop(img, self.size), F.center_crop(lbl, self.size)  # type: ignore[arg-type]
 
     def __repr__(self):
         return self.__class__.__name__ + '(size={0})'.format(self.size)
 
 
 class ExtRandomScale(object):
-    def __init__(self, scale_range, interpolation=Image.BILINEAR):
+    def __init__(self, scale_range, interpolation=Image.BILINEAR):  # type: ignore[attr-defined]
         self.scale_range = scale_range
         self.interpolation = interpolation
 
@@ -109,11 +109,11 @@ class ExtRandomScale(object):
         assert img.size == lbl.size
         scale = random.uniform(self.scale_range[0], self.scale_range[1])
         target_size = ( int(img.size[1]*scale), int(img.size[0]*scale) )
-        return F.resize(img, target_size, self.interpolation), F.resize(lbl, target_size, Image.NEAREST)
+        return F.resize(img, target_size, self.interpolation), F.resize(lbl, target_size, Image.NEAREST)  # type: ignore[arg-type, attr-defined]
 
     def __repr__(self):
-        interpolate_str = _pil_interpolation_to_str[self.interpolation]
-        return self.__class__.__name__ + '(size={0}, interpolation={1})'.format(self.size, interpolate_str)
+        interpolate_str = _pil_interpolation_to_str[self.interpolation]  # type: ignore[name-defined]
+        return self.__class__.__name__ + '(size={0}, interpolation={1})'.format(self.size, interpolate_str)  # type: ignore[attr-defined]
 
 class ExtScale(object):
     """Resize the input PIL Image to the given scale.
@@ -123,7 +123,7 @@ class ExtScale(object):
             ``PIL.Image.BILINEAR``
     """
 
-    def __init__(self, scale, interpolation=Image.BILINEAR):
+    def __init__(self, scale, interpolation=Image.BILINEAR):  # type: ignore[attr-defined]
         self.scale = scale
         self.interpolation = interpolation
 
@@ -138,11 +138,11 @@ class ExtScale(object):
         """
         assert img.size == lbl.size
         target_size = ( int(img.size[1]*self.scale), int(img.size[0]*self.scale) ) # (H, W)
-        return F.resize(img, target_size, self.interpolation), F.resize(lbl, target_size, Image.NEAREST)
+        return F.resize(img, target_size, self.interpolation), F.resize(lbl, target_size, Image.NEAREST)  # type: ignore[arg-type, attr-defined]
 
     def __repr__(self):
-        interpolate_str = _pil_interpolation_to_str[self.interpolation]
-        return self.__class__.__name__ + '(size={0}, interpolation={1})'.format(self.size, interpolate_str)
+        interpolate_str = _pil_interpolation_to_str[self.interpolation]  # type: ignore[name-defined]
+        return self.__class__.__name__ + '(size={0}, interpolation={1})'.format(self.size, interpolate_str)  # type: ignore[attr-defined]
 
 
 class ExtRandomRotation(object):
@@ -166,9 +166,9 @@ class ExtRandomRotation(object):
 
     def __init__(self, degrees, resample=False, expand=False, center=None):
         if isinstance(degrees, numbers.Number):
-            if degrees < 0:
+            if degrees < 0:  # type: ignore[operator]
                 raise ValueError("If degrees is a single number, it must be positive.")
-            self.degrees = (-degrees, degrees)
+            self.degrees = (-degrees, degrees)  # type: ignore[operator]
         else:
             if len(degrees) != 2:
                 raise ValueError("If degrees is a sequence, it must be of len 2.")
@@ -199,7 +199,7 @@ class ExtRandomRotation(object):
 
         angle = self.get_params(self.degrees)
 
-        return F.rotate(img, angle, self.resample, self.expand, self.center), F.rotate(lbl, angle, self.resample, self.expand, self.center)
+        return F.rotate(img, angle, self.resample, self.expand, self.center), F.rotate(lbl, angle, self.resample, self.expand, self.center)  # type: ignore[arg-type]
 
     def __repr__(self):
         format_string = self.__class__.__name__ + '(degrees={0}'.format(self.degrees)
@@ -267,8 +267,8 @@ class ExtPad(object):
         h, w = img.size
         ph = (h//32+1)*32 - h if h%32!=0 else 0
         pw = (w//32+1)*32 - w if w%32!=0 else 0
-        im = F.pad(img, ( pw//2, pw-pw//2, ph//2, ph-ph//2) )
-        lbl = F.pad(lbl, ( pw//2, pw-pw//2, ph//2, ph-ph//2))
+        im = F.pad(img, ( pw//2, pw-pw//2, ph//2, ph-ph//2) )  # type: ignore[arg-type]
+        lbl = F.pad(lbl, ( pw//2, pw-pw//2, ph//2, ph-ph//2))  # type: ignore[arg-type]
         return im, lbl
 
 class ExtToTensor(object):
@@ -341,7 +341,7 @@ class ExtRandomCrop(object):
 
     def __init__(self, size, padding=0, pad_if_needed=False):
         if isinstance(size, numbers.Number):
-            self.size = (int(size), int(size))
+            self.size = (int(size), int(size))  # type: ignore[arg-type]
         else:
             self.size = size
         self.padding = padding
@@ -376,18 +376,18 @@ class ExtRandomCrop(object):
         """
         assert img.size == lbl.size, 'size of img and lbl should be the same. %s, %s'%(img.size, lbl.size)
         if self.padding > 0:
-            img = F.pad(img, self.padding)
-            lbl = F.pad(lbl, self.padding)
+            img = F.pad(img, self.padding)  # type: ignore[arg-type]
+            lbl = F.pad(lbl, self.padding)  # type: ignore[arg-type]
 
         # pad the width if needed
-        if self.pad_if_needed and img.size[0] < self.size[1]:
-            img = F.pad(img, padding=int((1 + self.size[1] - img.size[0]) / 2))
-            lbl = F.pad(lbl, padding=int((1 + self.size[1] - lbl.size[0]) / 2))
+        if self.pad_if_needed and img.size[0] < self.size[1]:  # type: ignore[index]
+            img = F.pad(img, padding=int((1 + self.size[1] - img.size[0]) / 2))  # type: ignore[arg-type, index]
+            lbl = F.pad(lbl, padding=int((1 + self.size[1] - lbl.size[0]) / 2))  # type: ignore[arg-type, index]
 
         # pad the height if needed
-        if self.pad_if_needed and img.size[1] < self.size[0]:
-            img = F.pad(img, padding=int((1 + self.size[0] - img.size[1]) / 2))
-            lbl = F.pad(lbl, padding=int((1 + self.size[0] - lbl.size[1]) / 2))
+        if self.pad_if_needed and img.size[1] < self.size[0]:  # type: ignore[index]
+            img = F.pad(img, padding=int((1 + self.size[0] - img.size[1]) / 2))  # type: ignore[arg-type, index]
+            lbl = F.pad(lbl, padding=int((1 + self.size[0] - lbl.size[1]) / 2))  # type: ignore[arg-type, index]
 
         i, j, h, w = self.get_params(img, self.size)
 
@@ -409,8 +409,8 @@ class ExtResize(object):
             ``PIL.Image.BILINEAR``
     """
 
-    def __init__(self, size, interpolation=Image.BILINEAR):
-        assert isinstance(size, int) or (isinstance(size, collections.Iterable) and len(size) == 2)
+    def __init__(self, size, interpolation=Image.BILINEAR):  # type: ignore[attr-defined]
+        assert isinstance(size, int) or (isinstance(size, collections.Iterable) and len(size) == 2)  # type: ignore[name-defined]
         self.size = size
         self.interpolation = interpolation
 
@@ -421,10 +421,10 @@ class ExtResize(object):
         Returns:
             PIL Image: Rescaled image.
         """
-        return F.resize(img, self.size, self.interpolation), F.resize(lbl, self.size, Image.NEAREST)
+        return F.resize(img, self.size, self.interpolation), F.resize(lbl, self.size, Image.NEAREST)  # type: ignore[arg-type, attr-defined]
 
     def __repr__(self):
-        interpolate_str = _pil_interpolation_to_str[self.interpolation]
+        interpolate_str = _pil_interpolation_to_str[self.interpolation]  # type: ignore[name-defined]
         return self.__class__.__name__ + '(size={0}, interpolation={1})'.format(self.size, interpolate_str) 
     
 class ExtColorJitter(object):
@@ -453,9 +453,9 @@ class ExtColorJitter(object):
 
     def _check_input(self, value, name, center=1, bound=(0, float('inf')), clip_first_on_zero=True):
         if isinstance(value, numbers.Number):
-            if value < 0:
+            if value < 0:  # type: ignore[operator]
                 raise ValueError("If {} is a single number, it must be non negative.".format(name))
-            value = [center - value, center + value]
+            value = [center - value, center + value]  # type: ignore[operator]
             if clip_first_on_zero:
                 value[0] = max(value[0], 0)
         elif isinstance(value, (tuple, list)) and len(value) == 2:

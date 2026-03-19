@@ -105,7 +105,7 @@ class Evaluator:
     self.predict_fn = _get_predict_fn(
         predict_fn, jax.sharding.Mesh(devices, ("devices",)))
 
-    data = ds_core.get(**data)
+    data = ds_core.get(**data)  # type: ignore[call-overload]
     self.dataset, self.steps = input_pipeline.make_for_inference(
         data.get_tfdata(ordered=True), batch_size=batch_size,
         num_ex_per_process=data.num_examples_per_process(),

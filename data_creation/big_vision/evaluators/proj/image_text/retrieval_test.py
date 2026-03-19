@@ -168,7 +168,7 @@ class RetrievalTest(tf.test.TestCase):
     self.assertLen(results["images"]["embeddings"], num_examples)
     self.assertLen(results["images"]["id"], num_examples)
     # Assert no padding was processed (expects exactly one (=first) image.id=0
-    self.assertEqual((results["images"]["id"] == 0).sum(), 1)
+    self.assertEqual((results["images"]["id"] == 0).sum(), 1)  # type: ignore[attr-defined]
     # Expect perfect ITR with above _Model()...
     self.assertEqual(results["img2txt"]["Recall@1"], 1.0)
     self.assertEqual(results["txt2img"]["Recall@5"], 1.0)

@@ -46,7 +46,7 @@ def get_config(arg='split=final'):
   config = ConfigDict()
 
   config.input = {}
-  config.input.pp = (
+  config.input.pp = (  # type: ignore[attr-defined]
       f'decode|nyu_depth|'
       f'randu("fliplr")|det_fliplr(key="image")|det_fliplr(key="labels")|'
       f'inception_box|crop_box(key="image")|crop_box(key="labels")|'
@@ -77,9 +77,9 @@ def get_config(arg='split=final'):
       f'keep("image","image_ctx","ground_truth")'
   )
 
-  config.input.data = dict(name='nyu_depth_v2', split='train')
-  config.input.batch_size = 512
-  config.input.shuffle_buffer_size = 50_000
+  config.input.data = dict(name='nyu_depth_v2', split='train')  # type: ignore[attr-defined]
+  config.input.batch_size = 512  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 50_000  # type: ignore[attr-defined]
 
   config.total_epochs = 50
 
@@ -92,7 +92,7 @@ def get_config(arg='split=final'):
   # Optimizer section
   config.optax_name = 'big_vision.scale_by_adafactor'
   config.optax = dict(beta2_cap=0.95)
-  config.optax.clipping_threshold = None
+  config.optax.clipping_threshold = None  # type: ignore[attr-defined]
 
   config.lr = 0.001
   config.wd = 0.000001
@@ -140,31 +140,31 @@ def get_config(arg='split=final'):
 
   # Evaluation section
   config.evals = {}
-  config.evals.val = ConfigDict()
-  config.evals.val.type = 'proj.uvim.compute_mean'
-  config.evals.val.pred = 'validation'
-  config.evals.val.data = {**config.input.data}
-  config.evals.val.data.split = 'validation'
-  config.evals.val.pp_fn = pp_eval
-  config.evals.val.log_steps = 1000
+  config.evals.val = ConfigDict()  # type: ignore[attr-defined]
+  config.evals.val.type = 'proj.uvim.compute_mean'  # type: ignore[attr-defined]
+  config.evals.val.pred = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.data = {**config.input.data}  # type: ignore[attr-defined]
+  config.evals.val.data.split = 'validation'  # type: ignore[attr-defined]
+  config.evals.val.pp_fn = pp_eval  # type: ignore[attr-defined]
+  config.evals.val.log_steps = 1000  # type: ignore[attr-defined]
 
   base = {
       'type': 'proj.uvim.nyu_depth',
-      'dataset': config.input.data.name,
+      'dataset': config.input.data.name,  # type: ignore[attr-defined]
       'pp_fn': pp_predict,
       'log_steps': 2000,
       'min_depth': MIN_DEPTH,
       'max_depth': MAX_DEPTH,
   }
-  config.evals.nyu_depth_val = dict(**base, split='validation')
+  config.evals.nyu_depth_val = dict(**base, split='validation')  # type: ignore[attr-defined]
 
   if arg.singlehost:
-    config.input.batch_size = 32
+    config.input.batch_size = 32  # type: ignore[attr-defined]
     config.total_epochs = 20
   elif arg.runlocal:
     config.oracle.model_init = '/tmp/checkpoint.npz'
     config.model_init = {'encoder': '/tmp/enc_checkpoint.npz'}
     config.evals = {}
-    config.input.batch_size = 1
-    config.input.shuffle_buffer_size = 10
+    config.input.batch_size = 1  # type: ignore[attr-defined]
+    config.input.shuffle_buffer_size = 10  # type: ignore[attr-defined]
   return config

@@ -87,7 +87,7 @@ def load(init_params, init_files, model_cfg, img_load_kw={}):  # pylint: disable
 
   t_init = init_files.pop("temperature", init_files.pop("t", None))
   if t_init:
-    restored_params["t"] = utils.load_params(None, t_init)
+    restored_params["t"] = utils.load_params(None, t_init)  # type: ignore[call-overload]
 
   assert not init_files, (
       f"There's something unused left in `config.model_init`. You probably got "

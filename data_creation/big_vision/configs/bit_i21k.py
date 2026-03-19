@@ -35,17 +35,17 @@ def get_config():
   config.loss = 'sigmoid_xent'
 
   config.input = dict()
-  config.input.data = dict(
+  config.input.data = dict(  # type: ignore[attr-defined]
       name='imagenet21k',
       split='full[51200:]',
   )
-  config.input.batch_size = 4096
-  config.input.shuffle_buffer_size = 250_000  # Per host, so small-ish is ok.
+  config.input.batch_size = 4096  # type: ignore[attr-defined]
+  config.input.shuffle_buffer_size = 250_000  # Per host, so small-ish is ok.  # type: ignore[attr-defined]
 
   pp_common = '|value_range(-1, 1)|onehot({onehot_args})|keep("image", "labels")'
   pp_common_i21k = pp_common.format(onehot_args=f'{config.num_classes}')
   pp_common_i1k = pp_common.format(onehot_args='1000, key="label", key_result="labels"')
-  config.input.pp = 'decode_jpeg_and_inception_crop(224)|flip_lr' + pp_common_i21k
+  config.input.pp = 'decode_jpeg_and_inception_crop(224)|flip_lr' + pp_common_i21k  # type: ignore[attr-defined]
   pp_eval = 'decode|resize_small(256)|central_crop(224)'
 
   config.log_training_steps = 50
@@ -60,8 +60,8 @@ def get_config():
   config.grad_clip_norm = 1.0
 
   # linear scaling rule. Don't forget to sweep if sweeping batch_size.
-  config.lr = (0.03 / 256) * config.input.batch_size
-  config.wd = (3e-5 / 256) * config.input.batch_size
+  config.lr = (0.03 / 256) * config.input.batch_size  # type: ignore[attr-defined]
+  config.wd = (3e-5 / 256) * config.input.batch_size  # type: ignore[attr-defined]
   config.schedule = dict(decay_type='cosine', warmup_steps=5000)
 
   # Evaluations on i21k itself.
@@ -74,12 +74,12 @@ def get_config():
         log_steps=1000,  # Very fast O(seconds) so it's fine to run it often.
     )
   config.evals = {}
-  config.evals.test = eval_i21k('full[:25_600]')
-  config.evals.val = eval_i21k('full[25_600:51_200]')
-  config.evals.train = eval_i21k('full[51_200:76_800]')
+  config.evals.test = eval_i21k('full[:25_600]')  # type: ignore[attr-defined]
+  config.evals.val = eval_i21k('full[25_600:51_200]')  # type: ignore[attr-defined]
+  config.evals.train = eval_i21k('full[51_200:76_800]')  # type: ignore[attr-defined]
 
   # Few-shot evaluators
-  config.evals.fewshot = get_fewshot_lsr()
-  config.evals.fewshot.log_steps = 25_000
+  config.evals.fewshot = get_fewshot_lsr()  # type: ignore[attr-defined]
+  config.evals.fewshot.log_steps = 25_000  # type: ignore[attr-defined]
 
   return config

@@ -72,7 +72,7 @@ class Evaluator:
         predict_fn,
     )
 
-    data = ds_core.get(**data)
+    data = ds_core.get(**data)  # type: ignore[call-overload]
     self.dataset, self.steps = input_pipeline.make_for_inference(
         data.get_tfdata(ordered=True),
         batch_size=batch_size,
@@ -115,7 +115,7 @@ class Evaluator:
 
     logging.info('Saving %d examples in %s', count, outfile)
     outputs = jax.tree.map(lambda *x: np.concatenate(x, axis=0), *outputs)
-    utils.save_checkpoint(outputs, outfile, compressed=True)
+    utils.save_checkpoint(outputs, outfile, compressed=True)  # type: ignore[attr-defined]
     return
 
     yield None  # pylint: disable=unreachable

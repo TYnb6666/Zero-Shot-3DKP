@@ -166,31 +166,31 @@ def visualize_attn_maps(
         from datasets.celeba import CelebA
         dataset = CelebA(split="test", dataset_loc=dataset_loc, align = False)
     elif dataset_name == "cub_aligned":
-        from datasets import cub
+        from datasets import cub  # type: ignore[attr-defined]
         dataset = cub.TestSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "cub_001":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=1)
     elif dataset_name == "cub_002":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=2)
     elif dataset_name == "cub_003":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=3)
     elif dataset_name == "cub_all":
-        from datasets import cub_parts
+        from datasets import cub_parts  # type: ignore[attr-defined]
         dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test")
     elif dataset_name == "taichi":
-        from datasets import taichi
+        from datasets import taichi  # type: ignore[attr-defined]
         dataset = taichi.TestSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "human3.6m":
-        from datasets import human36m
+        from datasets import human36m  # type: ignore[attr-defined]
         dataset = human36m.TestSet(data_root=dataset_loc, validation=validation)
     elif dataset_name == "unaligned_human3.6m":
-        from datasets import unaligned_human36m
+        from datasets import unaligned_human36m  # type: ignore[attr-defined]
         dataset = unaligned_human36m.TestSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "deepfashion":
-        from datasets import deepfashion
+        from datasets import deepfashion  # type: ignore[attr-defined]
         dataset = deepfashion.TestSet(data_root=dataset_loc, image_size=512)
     elif dataset_name == "custom":
         from . import custom_images
@@ -294,29 +294,29 @@ def create_vid(
     max_num_frames = 1_000,
 ):
     if dataset_name == "celeba_aligned":
-        dataset = CelebA(split="test", dataset_loc=dataset_loc)
+        dataset = CelebA(split="test", dataset_loc=dataset_loc)  # type: ignore[name-defined]
     elif dataset_name == "celeba_wild":
-        dataset = CelebA(split="test", dataset_loc=dataset_loc, align = False)
+        dataset = CelebA(split="test", dataset_loc=dataset_loc, align = False)  # type: ignore[name-defined]
     elif dataset_name == "cub_aligned":
-        dataset = cub.TestSet(data_root=dataset_loc, image_size=512)
+        dataset = cub.TestSet(data_root=dataset_loc, image_size=512)  # type: ignore[name-defined]
     elif dataset_name == "cub_001":
-        dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=1)
+        dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=1)  # type: ignore[name-defined]
     elif dataset_name == "cub_002":
-        dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=2)
+        dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=2)  # type: ignore[name-defined]
     elif dataset_name == "cub_003":
-        dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=3)
+        dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test", single_class=3)  # type: ignore[name-defined]
     elif dataset_name == "cub_all":
-        dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test")
+        dataset = cub_parts.CUBDataset(dataset_root=dataset_loc, split="test")  # type: ignore[name-defined]
     elif dataset_name == "taichi":
-        dataset = taichi.TestSet(data_root=dataset_loc, image_size=512)
+        dataset = taichi.TestSet(data_root=dataset_loc, image_size=512)  # type: ignore[name-defined]
     elif dataset_name == "human3.6m":
-        dataset = human36m.TestSet(data_root=dataset_loc, validation=validation)
+        dataset = human36m.TestSet(data_root=dataset_loc, validation=validation)  # type: ignore[name-defined]
     elif dataset_name == "unaligned_human3.6m":
-        dataset = unaligned_human36m.TestSet(data_root=dataset_loc, image_size=512)
+        dataset = unaligned_human36m.TestSet(data_root=dataset_loc, image_size=512)  # type: ignore[name-defined]
     elif dataset_name == "deepfashion":
-        dataset = deepfashion.TestSet(data_root=dataset_loc, image_size=512)
+        dataset = deepfashion.TestSet(data_root=dataset_loc, image_size=512)  # type: ignore[name-defined]
     elif dataset_name == "custom":
-        dataset = custom_images.CustomDataset(data_root=dataset_loc, image_size=512)
+        dataset = custom_images.CustomDataset(data_root=dataset_loc, image_size=512)  # type: ignore[name-defined]
     else:
         raise NotImplementedError
     

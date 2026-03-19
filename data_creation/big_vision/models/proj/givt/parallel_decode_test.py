@@ -47,7 +47,7 @@ def _mask(*flags):
   return jnp.asarray(flags).astype(jnp.bool_)
 
 
-class HelperTest(googletest.TestCase):
+class HelperTest(googletest.TestCase):  # type: ignore[name-defined]
 
   def test_get_first_n(self):
     with self.subTest("ordered"):
@@ -151,4 +151,4 @@ class ParallelDecodeTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  googletest.main()  # type: ignore[name-defined]

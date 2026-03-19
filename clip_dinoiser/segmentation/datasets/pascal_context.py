@@ -48,10 +48,10 @@ class PascalContextDataset(BaseSegDataset):
         super(PascalContextDataset, self).__init__(
             img_suffix='.jpg',
             seg_map_suffix='.png',
-            split=split,
+            split=split,  # type: ignore[call-arg]
             reduce_zero_label=False,
             **kwargs)
-        assert osp.exists(self.img_dir) and self.split is not None
+        assert osp.exists(self.img_dir) and self.split is not None  # type: ignore[attr-defined]
 
 
 @DATASETS.register_module(force=True)
@@ -97,7 +97,7 @@ class PascalContextDataset59(BaseSegDataset):
         super(PascalContextDataset59, self).__init__(
             img_suffix='.jpg',
             seg_map_suffix='.png',
-            split=split,
+            split=split,  # type: ignore[call-arg]
             reduce_zero_label=True,
             **kwargs)
-        assert osp.exists(self.img_dir) and self.split is not None
+        assert osp.exists(self.img_dir) and self.split is not None  # type: ignore[attr-defined]

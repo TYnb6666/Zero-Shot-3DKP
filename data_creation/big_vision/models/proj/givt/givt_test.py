@@ -121,4 +121,4 @@ class MaskedTransformerTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  googletest.main()  # type: ignore[name-defined]

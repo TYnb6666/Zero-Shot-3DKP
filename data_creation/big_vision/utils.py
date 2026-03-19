@@ -161,7 +161,7 @@ def load_checkpoint_np(npz, tree=None):
   """
   if isinstance(npz, str):  # If not already loaded, then load.
     npz = npload(npz)
-  keys, values = zip(*list(npz.items()))
+  keys, values = zip(*list(npz.items()))  # type: ignore[attr-defined]
   if tree:
     checkpoint = tree.unflatten(values)
   else:
@@ -470,7 +470,7 @@ class Chrono:
     write_note = write_note or self._write_note
 
     now = time.monotonic()
-    measure("uptime", now - self.program_start_time)
+    measure("uptime", now - self.program_start_time)  # type: ignore[misc]
     self.flush_timings()
 
     # We do always count examples, regardless of the timing-related warmup that
@@ -478,17 +478,17 @@ class Chrono:
     ds = step - self.prev_step  # Steps between ticks
     self.prev_step = step
     self.accum_examples_seen += ds * self.global_bs
-    measure("examples_seen", self.accum_examples_seen)
-    measure("progress", step / self.total_steps)
+    measure("examples_seen", self.accum_examples_seen)  # type: ignore[misc]
+    measure("progress", step / self.total_steps)  # type: ignore[misc]
     if self.steps_per_epoch:
-      measure("epoch", step / self.steps_per_epoch)
+      measure("epoch", step / self.steps_per_epoch)  # type: ignore[misc]
 
     # We take the start as the second time `tick` is called, so we avoid
     # measuring the overhead of compilation and don't include it in time
     # estimates.
     if self.warmup > 1:
       self.warmup -= 1
-      write_note(self.note)  # This can help debugging.
+      write_note(self.note)  # This can help debugging.  # type: ignore[misc]
       return
     if self.warmup == 1:
       self.train_start_time = self.prev_time = now
@@ -496,14 +496,14 @@ class Chrono:
       self.accum_program_time += now - self.program_start_time
       self.paused_time = 0  # Drop pauses that happened before timing starts.
       self.warmup = 0
-      write_note(self.note)  # This can help debugging.
+      write_note(self.note)  # This can help debugging.  # type: ignore[misc]
       return
 
     # Measurement with micro-timings of current training steps speed.
     # Time between ticks (ignoring pause)
-    dt = now - self.prev_time - self.paused_time
+    dt = now - self.prev_time - self.paused_time  # type: ignore[operator]
     ncores = jax.device_count()  # Global device count
-    measure("img/sec/core", self.global_bs * ds / dt / ncores)
+    measure("img/sec/core", self.global_bs * ds / dt / ncores)  # type: ignore[misc]
 
     # Accumulate (integrate) times, good for plots.
     self.accum_train_time += dt
@@ -513,12 +513,12 @@ class Chrono:
     # Convert to, and log as, core hours.
     core_hours = self.accum_train_time * ncores / 60 / 60
     devtype = jax.devices()[0].device_kind
-    measure(f"core_hours_{devtype}", core_hours)
-    measure("core_hours", core_hours)  # For convenience as x-axis in sweeps.
+    measure(f"core_hours_{devtype}", core_hours)  # type: ignore[misc]
+    measure("core_hours", core_hours)  # For convenience as x-axis in sweeps.  # type: ignore[misc]
 
     # Progress note with "global" full-program average timings
     # (eg in program-time minus warmup)
-    dt = now - self.train_start_time  # Time elapsed since end of warmup.
+    dt = now - self.train_start_time  # Time elapsed since end of warmup.  # type: ignore[operator]
     steps_timed = step - self.train_start_step
     steps_todo = self.total_steps - step
     self.note = f"Steps:{step}/{self.total_steps} [{step/self.total_steps:.1%}]"
@@ -526,7 +526,7 @@ class Chrono:
     self.note += f" ({hms(self.accum_pause_time)} eval)"
     self.note += f"\nETA:{hms(dt / steps_timed*steps_todo)}"
     self.note += f"\nTotal train time:{hms(dt / steps_timed*self.total_steps)}"
-    write_note(self.note)
+    write_note(self.note)  # type: ignore[misc]
 
     log_memory(measure)
 
@@ -539,7 +539,7 @@ class Chrono:
     self.pause_start = time.monotonic()
 
   def resume(self):
-    self.paused_time += time.monotonic() - self.pause_start
+    self.paused_time += time.monotonic() - self.pause_start  # type: ignore[operator]
     self.pause_start = None
 
   def save(self):
@@ -1089,7 +1089,7 @@ def create_learning_rate_schedule(
   """
 
   def to_steps(name, default=0):
-    return steps(name, kw, data_size, batch_size, total_steps, default=default)
+    return steps(name, kw, data_size, batch_size, total_steps, default=default)  # type: ignore[arg-type]
 
   warmup_steps = to_steps("warmup")
   cooldown_steps = to_steps("cooldown")
@@ -1108,7 +1108,7 @@ def create_learning_rate_schedule(
     # The reference batch size in literature is 256, so we scale the lr to
     # adjust to the literature lr when bach_size changes.
     if scale_with_batchsize:
-      lr = lr * batch_size / 256.0
+      lr = lr * batch_size / 256.0  # type: ignore[operator]
 
     progress = (step - warmup_steps) / float(total_steps - warmup_steps)
     progress = jnp.clip(progress, 0.0, 1.0)
@@ -1126,7 +1126,7 @@ def create_learning_rate_schedule(
       lr = jnp.where(
           warmup_steps <= step,
           lr / jnp.sqrt(1 + (step + shift - warmup_steps) / t),  # In decay
-          lr / jnp.sqrt(1 + shift / t))  # In warmup.
+          lr / jnp.sqrt(1 + shift / t))  # In warmup.  # type: ignore[operator]
     elif decay_type == "stair":
       i = jnp.searchsorted(jnp.array(kw.get("steps", [])), step + 1)
       lr = lr * jnp.take(jnp.array([1.0] + list(kw.get("mults", []))), i)
@@ -1310,7 +1310,7 @@ def maybe_cleanup_workdir(workdir, cleanup, info):
     gfile.rmtree(workdir)
     try:  # Only need this on the last work-unit, if already empty.
       gfile.remove(os.path.join(workdir, ".."))
-    except tf.errors.OpError:
+    except tf.errors.OpError:  # type: ignore[name-defined]
       pass
 
 

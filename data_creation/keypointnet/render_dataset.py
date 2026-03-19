@@ -25,7 +25,7 @@ def run(args, mesh_id, mesh_class, keypoint_ann, seed, n_points=1024, keypoints_
     print("\tReading the mesh...")
     mesh_path = os.path.join(args.keypointnet_dir, 'ShapeNetCore.v2.ply', mesh_class, f'{mesh_id}.ply')
     mesh, translation, scale = prepare_mesh(mesh_path, mode="sphere")
-    mesh.visual.face_colors = np.array([255 // 2, 255 // 2, 255 // 2])
+    mesh.visual.face_colors = np.array([255 // 2, 255 // 2, 255 // 2])  # type: ignore[attr-defined]
     print("\tdone.")
 
     keypoint_ann = keypoint_ann[mesh_id]
@@ -37,8 +37,8 @@ def run(args, mesh_id, mesh_class, keypoint_ann, seed, n_points=1024, keypoints_
     ###############################
     ##### Sampling point clouds ###
     ###############################
-    f, v, n = np.array(deepcopy(mesh.faces)), np.array(
-        deepcopy(mesh.vertices)), np.array(deepcopy(mesh.vertex_normals))
+    f, v, n = np.array(deepcopy(mesh.faces)), np.array(  # type: ignore[attr-defined]
+        deepcopy(mesh.vertices)), np.array(deepcopy(mesh.vertex_normals))  # type: ignore[attr-defined]
     _sampled_points_face_ids, bc = pcu.sample_mesh_poisson_disk(
         v, f, n_points * 2, random_seed=2023)
     _sampled_points = pcu.interpolate_barycentric_coords(
@@ -81,7 +81,7 @@ def run(args, mesh_id, mesh_class, keypoint_ann, seed, n_points=1024, keypoints_
 
     # Render Mesh
     camera_poses = get_camera_poses(
-        target=np.mean(mesh.vertices, axis=0), seed=seed,
+        target=np.mean(mesh.vertices, axis=0), seed=seed,  # type: ignore[attr-defined]
         add_random_views=bool(args.num_random_views), num_random_views=args.num_random_views)
 
     # print(camera_poses.shape)
@@ -89,21 +89,21 @@ def run(args, mesh_id, mesh_class, keypoint_ann, seed, n_points=1024, keypoints_
     print("\tRendering the mesh...")
     triangle_ids, rendered_images, normal_maps, depth_images, p_images = renderer.render(
         path=None,
-        clean=None,
+        clean=None,  # type: ignore[arg-type]
         intensity=6.0,  # Light intensity
         mesh=mesh,
         only_render_images=False,
-        color=None,
+        color=None,  # type: ignore[arg-type]
         correct_n=True,
     )
 
     _, rendered_images, _, _, _ = renderer.render(
         path=None,
-        clean=None,
+        clean=None,  # type: ignore[arg-type]
         intensity=6.0,  # Light intensity
         mesh=mesh,
         only_render_images=True,
-        color=None,
+        color=None,  # type: ignore[arg-type]
         correct_n=True,
     )
     print("\tdone.")

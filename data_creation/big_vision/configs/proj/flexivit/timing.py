@@ -43,7 +43,7 @@ def get_config():
   c.num_classes = 0
 
   c.evals = {}
-  c.evals.timing = dict(
+  c.evals.timing = dict(  # type: ignore[attr-defined]
       type='timing',
       input_shapes=[shape],
       timing=True,

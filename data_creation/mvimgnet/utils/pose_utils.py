@@ -440,4 +440,4 @@ def gen_poses(basezip, match_type, factors=None):
 if __name__ == '__main__':
     debug_shape_path = '/home/abdeas0a/research/datasets/MVImgNet/MVImgNet_by_categories/11/16009258'
     debug_shape_point_cloud = '/datawaha/cggroup/abdeas0a/datasets/MVImgNet/mvpnet/MVPNet/11/16009258.pcd'
-    poses, pts3d, perm = load_colmap_data(debug_shape_path)
+    poses, pts3d, perm = load_colmap_data(debug_shape_path)  # type: ignore[misc]

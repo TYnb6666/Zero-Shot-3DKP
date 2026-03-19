@@ -88,23 +88,23 @@ class ResidualUnit(nn.Module):
   def __call__(self, x):
     nmid = self.nmid or x.shape[-1] // 4
     nout = nmid * 4
-    conv = functools.partial(StdConv, use_bias=False)
+    conv = functools.partial(StdConv, use_bias=False)  # type: ignore[call-overload]
 
     residual = x
     x = GroupNorm(name='gn1')(x)
     x = nn.relu(x)
 
     if x.shape[-1] != nout or self.strides != (1, 1):
-      residual = conv(nout, (1, 1), self.strides, name='conv_proj')(x)
+      residual = conv(nout, (1, 1), self.strides, name='conv_proj')(x)  # type: ignore[call-overload]
 
-    x = conv(nmid, (1, 1), name='conv1')(x)
+    x = conv(nmid, (1, 1), name='conv1')(x)  # type: ignore[call-overload]
     x = GroupNorm(name='gn2')(x)
     x = nn.relu(x)
-    x = conv(nmid, (3, 3), self.strides, padding=[(1, 1), (1, 1)],
+    x = conv(nmid, (3, 3), self.strides, padding=[(1, 1), (1, 1)],  # type: ignore[call-overload]
              name='conv2')(x)
     x = GroupNorm(name='gn3')(x)
     x = nn.relu(x)
-    x = conv(nout, (1, 1), name='conv3')(x)
+    x = conv(nout, (1, 1), name='conv3')(x)  # type: ignore[call-overload]
 
     return x + residual
 

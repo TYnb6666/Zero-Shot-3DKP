@@ -50,7 +50,7 @@ def resample_patchemb(old, new_hw):
   logging.info("FlexiViT: resize embedding %s to %s", old.shape, new_hw)
 
   def resize(x_np, new_shape):
-    x_tf = tf.constant(x_np)[None, ..., None]
+    x_tf = tf.constant(x_np)[None, ..., None]  # type: ignore[arg-type]
     # NOTE: we are using tf.image.resize here to match the resize operations in
     # the data preprocessing pipeline.
     x_upsampled = tf.image.resize(

@@ -263,7 +263,7 @@ class Model(vae.Model):
         channel_multipliers=self.channel_multipliers,
         norm_type=self.norm_type,
         activation_fn_str=self.activation_fn,
-        embedding_dim=2 * self.codeword_dim,
+        embedding_dim=2 * self.codeword_dim,  # type: ignore[operator]
         conv_downsample=self.conv_downsample,
         dtype=self.dtype,
         name="cnn_encoder",

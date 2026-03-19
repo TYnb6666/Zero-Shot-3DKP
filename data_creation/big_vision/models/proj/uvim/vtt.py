@@ -243,7 +243,7 @@ def load(init_params, init_files, model_params=None,
   del model_params
   if isinstance(init_files, str):
     # A shortcut for a single file checkpoint of a vtt model.
-    ckpt_params = utils.load_params(None, init_files)
+    ckpt_params = utils.load_params(None, init_files)  # type: ignore[call-overload]
     ckpt_params = flax.training.checkpoints.convert_pre_linen(ckpt_params)
     if init_params is not None:
       ckpt_params = common.merge_params(ckpt_params, init_params, dont_load)

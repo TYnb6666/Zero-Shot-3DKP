@@ -31,7 +31,7 @@ class QuickGELU(nn.Module):
 
 
 class ResidualAttentionBlock(nn.Module):
-    def __init__(self, d_model: int, n_head: int, attn_mask: torch.Tensor = None):
+    def __init__(self, d_model: int, n_head: int, attn_mask: torch.Tensor = None):  # type: ignore[arg-type]
         super().__init__()
 
         self.attn = nn.MultiheadAttention(d_model, n_head)
@@ -55,7 +55,7 @@ class ResidualAttentionBlock(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, width: int, layers: int, heads: int, attn_mask: torch.Tensor = None):
+    def __init__(self, width: int, layers: int, heads: int, attn_mask: torch.Tensor = None):  # type: ignore[arg-type]
         super().__init__()
         self.width = width
         self.layers = layers
@@ -70,31 +70,31 @@ class ULIP_WITH_IMAGE(nn.Module):
         # super().__init__(ssl_mlp_dim, ssl_emb_dim, **kwargs)
         super().__init__()
         kwargs = EasyDict(kwargs)
-        self.context_length = kwargs.context_length
-        self.vision_width = kwargs.vision_width
-        self.visual = kwargs.vision_model
+        self.context_length = kwargs.context_length  # type: ignore[attr-defined]
+        self.vision_width = kwargs.vision_width  # type: ignore[attr-defined]
+        self.visual = kwargs.vision_model  # type: ignore[attr-defined]
 
         self.transformer = Transformer(
-            width=kwargs.transformer_width,
-            layers=kwargs.transformer_layers,
-            heads=kwargs.transformer_heads,
+            width=kwargs.transformer_width,  # type: ignore[attr-defined]
+            layers=kwargs.transformer_layers,  # type: ignore[attr-defined]
+            heads=kwargs.transformer_heads,  # type: ignore[attr-defined]
             attn_mask=self.build_attention_mask(),
         )
 
-        self.vocab_size = kwargs.vocab_size
-        self.token_embedding = nn.Embedding(kwargs.vocab_size, kwargs.transformer_width)
-        self.positional_embedding = nn.Parameter(torch.empty(self.context_length, kwargs.transformer_width))
-        self.ln_final = LayerNorm(kwargs.transformer_width)
+        self.vocab_size = kwargs.vocab_size  # type: ignore[attr-defined]
+        self.token_embedding = nn.Embedding(kwargs.vocab_size, kwargs.transformer_width)  # type: ignore[attr-defined]
+        self.positional_embedding = nn.Parameter(torch.empty(self.context_length, kwargs.transformer_width))  # type: ignore[attr-defined]
+        self.ln_final = LayerNorm(kwargs.transformer_width)  # type: ignore[attr-defined]
 
-        self.image_projection = nn.Parameter(torch.empty(kwargs.vision_width, kwargs.embed_dim))
-        self.text_projection = nn.Parameter(torch.empty(kwargs.transformer_width, kwargs.embed_dim))
+        self.image_projection = nn.Parameter(torch.empty(kwargs.vision_width, kwargs.embed_dim))  # type: ignore[attr-defined]
+        self.text_projection = nn.Parameter(torch.empty(kwargs.transformer_width, kwargs.embed_dim))  # type: ignore[attr-defined]
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
         self.initialize_parameters()
 
         self.point_encoder = point_encoder
 
-        self.pc_projection = nn.Parameter(torch.empty(kwargs.pc_feat_dims, 512))
+        self.pc_projection = nn.Parameter(torch.empty(kwargs.pc_feat_dims, 512))  # type: ignore[attr-defined]
         nn.init.normal_(self.pc_projection, std=512 ** -0.5)
 
     def encode_image(self, image):
@@ -132,10 +132,10 @@ class ULIP_WITH_IMAGE(nn.Module):
         attn_std = self.transformer.width ** -0.5
         fc_std = (2 * self.transformer.width) ** -0.5
         for block in self.transformer.resblocks:
-            nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
-            nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
-            nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
-            nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
+            nn.init.normal_(block.attn.in_proj_weight, std=attn_std)  # type: ignore[arg-type, attr-defined]
+            nn.init.normal_(block.attn.out_proj.weight, std=proj_std)  # type: ignore[arg-type, attr-defined]
+            nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)  # type: ignore[arg-type, attr-defined]
+            nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)  # type: ignore[arg-type, attr-defined]
 
         nn.init.normal_(self.image_projection, std=self.vision_width ** -0.5)
         nn.init.normal_(self.text_projection, std=self.transformer.width ** -0.5)
@@ -177,7 +177,7 @@ class ULIP2_WITH_OPENCLIP(nn.Module):
         super().__init__()
         kwargs = EasyDict(kwargs)
 
-        self.open_clip_model = kwargs.open_clip_model
+        self.open_clip_model = kwargs.open_clip_model  # type: ignore[attr-defined]
 
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
@@ -185,7 +185,7 @@ class ULIP2_WITH_OPENCLIP(nn.Module):
 
         self.tokenizer = open_clip.get_tokenizer('ViT-bigG-14')
 
-        self.pc_projection = nn.Parameter(torch.empty(kwargs.pc_feat_dims, 1280))
+        self.pc_projection = nn.Parameter(torch.empty(kwargs.pc_feat_dims, 1280))  # type: ignore[attr-defined]
         nn.init.normal_(self.pc_projection, std=1280 ** -0.5)
 
     def encode_image(self, image):
@@ -237,6 +237,115 @@ def get_metric_names(model):
     return ['loss', 'ulip_loss', 'ulip_pc_image_acc', 'ulip_pc_text_acc']
 
 
+def ULIP_PN_SSG(args):
+    vision_model = timm.create_model('vit_base_patch16_224', num_classes=0)
+
+    # =====================================================================
+    # import the 3D backbone and specify the output point cloud feature dimension
+    point_encoder = Pointnet2_Ssg()
+    pc_feat_dims = 256
+    # =====================================================================
+
+    model = ULIP_WITH_IMAGE(embed_dim=512, vision_width=768, point_encoder=point_encoder, vision_model=vision_model,
+                            context_length=77, vocab_size=49408,
+                            transformer_width=512, transformer_heads=8, transformer_layers=12, pc_feat_dims=pc_feat_dims)
+
+    if not args.evaluate_3d:
+        # load the pretrained model
+        pretrain_slip_model = torch.load('./data/initialize_models/slip_base_100ep.pt', map_location=torch.device('cpu'))
+        pretrain_slip_model_params = pretrain_slip_model['state_dict']
+        pretrain_slip_model_params = {param_name.replace('module.', ''): param for param_name, param in
+                                      pretrain_slip_model_params.items()}
+
+        for name, param in model.named_parameters():
+            if name not in pretrain_slip_model_params:
+                continue
+
+            if isinstance(pretrain_slip_model_params[name], Parameter):
+                param_new = pretrain_slip_model_params[name].data
+            else:
+                param_new = pretrain_slip_model_params[name]
+
+            param.requires_grad = False
+            print('load {} and freeze'.format(name))
+            param.data.copy_(param_new)
+
+    return model
+
+def ULIP_PN_MLP(args):
+    vision_model = timm.create_model('vit_base_patch16_224', num_classes=0)
+
+    # =====================================================================
+    # import the 3D backbone and specify the output point cloud feature dimension
+    from models.pointmlp.pointMLP import pointMLP
+    point_encoder = pointMLP()
+    pc_feat_dims = 256
+    # =====================================================================
+
+    model = ULIP_WITH_IMAGE(embed_dim=512, vision_width=768, point_encoder=point_encoder, vision_model=vision_model,
+                            context_length=77, vocab_size=49408,
+                            transformer_width=512, transformer_heads=8, transformer_layers=12, pc_feat_dims=pc_feat_dims)
+
+    if not args.evaluate_3d:
+        # load the pretrained model
+        pretrain_slip_model = torch.load('./data/initialize_models/slip_base_100ep.pt', map_location=torch.device('cpu'))
+        pretrain_slip_model_params = pretrain_slip_model['state_dict']
+        pretrain_slip_model_params = {param_name.replace('module.', ''): param for param_name, param in
+                                      pretrain_slip_model_params.items()}
+
+        for name, param in model.named_parameters():
+            if name not in pretrain_slip_model_params:
+                continue
+
+            if isinstance(pretrain_slip_model_params[name], Parameter):
+                param_new = pretrain_slip_model_params[name].data
+            else:
+                param_new = pretrain_slip_model_params[name]
+
+            param.requires_grad = False
+            print('load {} and freeze'.format(name))
+            param.data.copy_(param_new)
+
+    return model
+
+def ULIP_PointBERT(args):
+    vision_model = timm.create_model('vit_base_patch16_224', num_classes=0)
+
+    # =====================================================================
+    # import the 3D backbone and specify the output point cloud feature dimension
+    from models.pointbert.point_encoder import PointTransformer
+    config_addr = './models/pointbert/PointTransformer_8192point.yaml'
+    config = cfg_from_yaml_file(config_addr)
+    point_encoder = PointTransformer(config.model, args=args)  # type: ignore[attr-defined]
+    pc_feat_dims = 768
+    # =====================================================================
+
+    model = ULIP_WITH_IMAGE(embed_dim=512, vision_width=768, point_encoder=point_encoder, vision_model=vision_model,
+                            context_length=77, vocab_size=49408,
+                            transformer_width=512, transformer_heads=8, transformer_layers=12, pc_feat_dims=pc_feat_dims)
+
+    if not args.evaluate_3d:
+        # load the pretrained model
+        pretrain_slip_model = torch.load('./data/initialize_models/slip_base_100ep.pt', map_location=torch.device('cpu'))
+        pretrain_slip_model_params = pretrain_slip_model['state_dict']
+        pretrain_slip_model_params = {param_name.replace('module.', ''): param for param_name, param in
+                                      pretrain_slip_model_params.items()}
+
+        for name, param in model.named_parameters():
+            if name not in pretrain_slip_model_params:
+                continue
+
+            if isinstance(pretrain_slip_model_params[name], Parameter):
+                param_new = pretrain_slip_model_params[name].data
+            else:
+                param_new = pretrain_slip_model_params[name]
+
+            param.requires_grad = False
+            print('load {} and freeze'.format(name))
+            param.data.copy_(param_new)
+
+    return model
+
 def ULIP2_PointBERT_Colored(args):
     print("Get openclip model:")
     open_clip_model, _, preprocess = open_clip.create_model_and_transforms('ViT-bigG-14',
@@ -251,7 +360,7 @@ def ULIP2_PointBERT_Colored(args):
     # Get absolute path to config file relative to this file
     config_addr = os.path.join(os.path.dirname(__file__), 'pointbert', 'ULIP_2_PointBERT_10k_colored_pointclouds.yaml')
     config = cfg_from_yaml_file(config_addr)
-    point_encoder = PointTransformer_Colored(config.model, args=args)
+    point_encoder = PointTransformer_Colored(config.model, args=args)  # type: ignore[attr-defined]
     pc_feat_dims = 768
     # =====================================================================
 

@@ -32,7 +32,7 @@ def crop_and_resize(image, target_size):
 
 def read_image(url, target_size):
     contents = io.BytesIO(requests.get(url).content)
-    image = PIL.Image.open(contents)
+    image = PIL.Image.open(contents)  # type: ignore[attr-defined]
     image = crop_and_resize(image, target_size)
     image = np.array(image)
     # Remove alpha channel if necessary.
@@ -105,7 +105,7 @@ def display_segment_output(image, bounding_box, segment_mask, target_image_size)
         if mask.ndim == 3:
             mask = mask.squeeze(axis=-1)
         mask = Image.fromarray(mask)
-        mask = mask.resize((x2 - x1, y2 - y1), resample=Image.NEAREST)
+        mask = mask.resize((x2 - x1, y2 - y1), resample=Image.NEAREST)  # type: ignore[attr-defined]
         mask = np.array(mask)
         binary_mask = (mask > 0.5).astype(np.uint8)
 
@@ -147,7 +147,7 @@ def draw_segment_output(image, bounding_box, segment_mask, target_image_size):
         if mask.ndim == 3:
             mask = mask.squeeze(axis=-1)
         mask = Image.fromarray(mask)
-        mask = mask.resize((x2 - x1, y2 - y1), resample=Image.NEAREST)
+        mask = mask.resize((x2 - x1, y2 - y1), resample=Image.NEAREST)  # type: ignore[attr-defined]
         mask = np.array(mask)
         binary_mask = (mask > 0.5).astype(np.uint8)
 
@@ -245,7 +245,7 @@ class PaliGemma:
 def main():
     gemma = PaliGemma()
     image = Image.open(sys.argv[1]) if len(sys.argv) > 1 else Image.open(
-        requests.get("https://picsum.photos/id/237/536/354", stream=True).raw)
+        requests.get("https://picsum.photos/id/237/536/354", stream=True).raw)  # type: ignore[arg-type]
     t0 = time.time()
     generated_text = gemma.generated_kps_points(image, text='segment armrest')
     t1 = time.time()

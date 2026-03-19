@@ -89,7 +89,7 @@ class Evaluator:
 
     # Actually save in filesystem.
     outputs = jax.tree_map(lambda *x: np.concatenate(x, axis=0), *outputs)
-    u.save_checkpoint(outputs, self.path, compressed=True)
+    u.save_checkpoint(outputs, self.path, compressed=True)  # type: ignore[attr-defined]
     return
 
     yield None  # pylint: disable=unreachable

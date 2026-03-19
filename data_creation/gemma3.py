@@ -209,7 +209,7 @@ class Gemma3:
 def main():
     gemma = Gemma3()
     image = Image.open(sys.argv[1]) if len(sys.argv) > 1 else Image.open(
-        requests.get("https://picsum.photos/id/237/536/354", stream=True).raw)
+        requests.get("https://picsum.photos/id/237/536/354", stream=True).raw)  # type: ignore[arg-type]
     t0 = time.time()
     generated_text = gemma.generated_kps_points(image, text='<start_of_image> point to the armrest')
     t1 = time.time()

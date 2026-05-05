@@ -2081,6 +2081,12 @@ class MolmoForCausalLM(GenerationMixin, PreTrainedModel):
         else:
             self.model = model
 
+        # Standard HuggingFace pattern: post_init() sets
+        # ``all_tied_weights_keys``, ``_no_split_modules``, calls
+        # ``init_weights()`` / ``tie_weights()``, etc.  Weight init is
+        # overwritten by ``from_pretrained`` immediately after, so this is
+        # safe even though ``init_params`` may be False.
+        self.post_init()
 
     def forward(
         self,
@@ -2312,7 +2318,7 @@ class MolmoForCausalLM(GenerationMixin, PreTrainedModel):
         else:
             self.model.transformer.ff_out = value
 
-    def tie_weights(self):
+    def tie_weights(self, **kwargs):
         """
         This function is intentionally left as a no-op.
 

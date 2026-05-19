@@ -21,7 +21,13 @@ from zerokey._defaults import DEFAULT_LOG_DIR
               help='Render resolution')
 @click.option('--scale', default=2, show_default=True,
               help='Upscaling factor for high-res rendering')
-def eval_cmd(log_dir: Path, expname: str, dataset: str, use_texture: bool, res: int, scale: int) -> None:
+@click.option('--num-shards', type=int, default=1, show_default=True,
+              help='Total number of shards for KeypointNet class-wise splitting')
+@click.option('--shard-id', type=int, default=0, show_default=True,
+              help='0-based shard index for KeypointNet class-wise splitting')
+@click.option('--max-meshes', type=int, default=0, show_default=True,
+              help='Stop after processing N selected meshes (0 = no limit)')
+def eval_cmd(log_dir: Path, expname: str, dataset: str, use_texture: bool, res: int, scale: int, num_shards: int, shard_id: int, max_meshes: int) -> None:
     """Run ZeroKey 3D keypoint detection
 
     Examples:
@@ -31,7 +37,12 @@ def eval_cmd(log_dir: Path, expname: str, dataset: str, use_texture: bool, res: 
     if dataset == 'keypointnet':
         from zerokey.generators.kpnet import KPNetGenerator
         generator = KPNetGenerator(log_dir, expname=expname, res=res, scale=scale)
-        generator.main_loop(use_texture=use_texture)
+        generator.main_loop(
+            use_texture=use_texture,
+            num_shards=num_shards,
+            shard_id=shard_id,
+            max_meshes=max_meshes if max_meshes > 0 else None,
+        )
     elif dataset == 'human3m':
         from zerokey.generators.human3m import Human3MGenerator
         generator = Human3MGenerator(log_dir, expname=expname)

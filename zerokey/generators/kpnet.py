@@ -372,6 +372,14 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
                 kps = None if self.kp_initialized_empty else kps_3d
 
             if kps is not None:
+                self.io.save_kps_2d_json(
+                    class_title=class_title,
+                    mesh_id=mesh_id,
+                    semantic_ids=tuple(map(int, semantic_ids)),
+                    prompt=kp_prompt,
+                    kps_2d=kps,
+                    num_views=int(images.size(0)),
+                )
                 # Backproject 2D detections -> 3D points with uint8 features
                 kps_3d = self.backproject_kps(mesh, fragments, R, T, kps)
                 if self.vis and images_with_kps:
@@ -403,7 +411,14 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
 
         return all_kps
 
-    def main_loop(self, use_texture: bool = False, save_rendered_images: bool = debug_enabled(), batch_size: int = 13) -> None:
+    def main_loop(
+            self,
+            use_texture: bool = False,
+            save_rendered_images: bool = debug_enabled(),
+            batch_size: int = 13,
+            num_shards: int = 1,
+            shard_id: int = 0,
+            max_meshes: int | None = None) -> None:
         """Run the full detection pipeline over all test meshes.
 
         For each mesh: render views, detect keypoints via MLLM, backproject to
@@ -414,8 +429,25 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
             use_texture: Whether to render meshes with texture.
             save_rendered_images: Save multi-view renders as grid images.
             batch_size: Number of views to render per batch (memory trade-off).
+            num_shards: Total number of shards for class-wise splitting.
+            shard_id: 0-based shard index to run in this process.
+            max_meshes: Optional cap of selected meshes to process.
         """
+        if num_shards < 1:
+            raise ValueError(f'num_shards must be >= 1, got {num_shards}')
+        if shard_id < 0 or shard_id >= num_shards:
+            raise ValueError(f'shard_id must be in [0, {num_shards}), got {shard_id}')
+
+        per_class_idx: dict[str, int] = {}
+        selected_meshes = 0
         for mesh, keypoints, class_title, mesh_id, _pcd in self.io.loop_over_test_datasets(use_texture):
+            class_idx = per_class_idx.get(class_title, 0)
+            per_class_idx[class_title] = class_idx + 1
+            if class_idx % num_shards != shard_id:
+                continue
+            if max_meshes is not None and selected_meshes >= max_meshes:
+                break
+            selected_meshes += 1
             try:
                 kp_list = self.io.get_kp_names_from_lable(class_title, mesh_id, keypoints)
                 # if mesh_id != 'e4e98f8654d29536dc858dada15498d2':
@@ -442,5 +474,3 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
                 self.io.save_kps_with_semantic_ids(mesh, all_kps, class_title, mesh_id)
             except IOError as e:
                 print(f'Error with {e}', file=sys.stderr)
-
-

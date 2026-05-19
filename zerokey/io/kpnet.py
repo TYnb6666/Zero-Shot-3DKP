@@ -9,6 +9,7 @@ from io import BytesIO
 from itertools import zip_longest
 from pathlib import Path
 from typing import Any, Generator, Iterable, Iterator, Union
+import re
 
 from einops import rearrange
 import numpy as np
@@ -254,6 +255,46 @@ class KPNetIO(IO):
         plt.tight_layout()
         plt.savefig(save_dir / f"{prefix or mesh_id}_{postfix}.png", bbox_inches='tight', pad_inches=0, dpi=200)
         plt.close()
+
+    @staticmethod
+    def _safe_filename_token(token: str, max_len: int = 96) -> str:
+        """Normalize arbitrary text into a filesystem-safe token."""
+        norm = re.sub(r"[^A-Za-z0-9_.-]+", "_", token.strip())
+        norm = norm.strip('_')
+        if not norm:
+            norm = 'empty'
+        return norm[:max_len]
+
+    def save_kps_2d_json(
+        self,
+        class_title: str,
+        mesh_id: str,
+        semantic_ids: list[int] | tuple[int, ...],
+        prompt: str,
+        kps_2d: dict[int, Any],
+        num_views: int,
+        prefix: str = 'Molmo2D',
+    ) -> Path:
+        """Save raw 2-D keypoint detections from Molmo to a JSON file."""
+        save_dir = self.output_dir / class_title / mesh_id
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        semantic_token = ','.join(map(str, semantic_ids)) if semantic_ids else 'none'
+        prompt_token = self._safe_filename_token(prompt)
+        save_path = save_dir / f"{prefix}_{semantic_token}_{prompt_token}_kps2d.json"
+
+        payload = {
+            'class_title': class_title,
+            'mesh_id': mesh_id,
+            'prompt': prompt,
+            'semantic_ids': list(map(int, semantic_ids)),
+            'num_views': int(num_views),
+            'success_views': int(len(kps_2d)),
+            'kps_2d': {str(int(view_idx)): v for view_idx, v in kps_2d.items()},
+        }
+        with save_path.open('w', encoding='utf-8') as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        return save_path
 
 
 class KPNetEvaluator:

@@ -372,6 +372,14 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
                 kps = None if self.kp_initialized_empty else kps_3d
 
             if kps is not None:
+                self.io.save_kps_2d_json(
+                    class_title=class_title,
+                    mesh_id=mesh_id,
+                    semantic_ids=tuple(map(int, semantic_ids)),
+                    prompt=kp_prompt,
+                    kps_2d=kps,
+                    num_views=int(images.size(0)),
+                )
                 # Backproject 2D detections -> 3D points with uint8 features
                 kps_3d = self.backproject_kps(mesh, fragments, R, T, kps)
                 if self.vis and images_with_kps:
@@ -442,5 +450,4 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
                 self.io.save_kps_with_semantic_ids(mesh, all_kps, class_title, mesh_id)
             except IOError as e:
                 print(f'Error with {e}', file=sys.stderr)
-
 

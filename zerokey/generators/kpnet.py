@@ -3,6 +3,7 @@
 import math
 import os
 import sys
+from datetime import datetime, timezone
 from typing import List, Union, Any, Generic, ClassVar, TypeVar, cast, get_args
 from collections import defaultdict, Counter
 from pathlib import Path
@@ -438,9 +439,13 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         if shard_id < 0 or shard_id >= num_shards:
             raise ValueError(f'shard_id must be in [0, {num_shards}), got {shard_id}')
 
+        skipped_meshes = self._load_skip_meshes()
         per_class_idx: dict[str, int] = {}
         selected_meshes = 0
         for mesh, keypoints, class_title, mesh_id, _pcd in self.io.loop_over_test_datasets(use_texture):
+            if (class_title, mesh_id) in skipped_meshes:
+                print(f'Skipping blacklisted mesh class {class_title} mesh {mesh_id}')
+                continue
             class_idx = per_class_idx.get(class_title, 0)
             per_class_idx[class_title] = class_idx + 1
             if class_idx % num_shards != shard_id:
@@ -472,5 +477,46 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
                 # kp_list = self.get_kp_names(images)
                 all_kps = self.process_kp_list(mesh, fragments, R, T, images, kp_list, class_title, mesh_id)
                 self.io.save_kps_with_semantic_ids(mesh, all_kps, class_title, mesh_id)
-            except IOError as e:
+            except (IOError, torch.AcceleratorError, RuntimeError) as e:
+                emsg = str(e)
+                if 'illegal memory access' in emsg or 'cudaErrorIllegalAddress' in emsg:
+                    self._record_skip_mesh(class_title, mesh_id, emsg)
+                    skipped_meshes.add((class_title, mesh_id))
+                    print(
+                        f'[WARN] Added mesh to skip list due to CUDA illegal address: '
+                        f'class={class_title} mesh={mesh_id}',
+                        file=sys.stderr)
                 print(f'Error with {e}', file=sys.stderr)
+
+    def _skip_mesh_log_path(self) -> Path:
+        """Path to persistent skip-list file shared by future eval runs."""
+        return self.log_dir / self.expname / 'skipped_meshes.txt'
+
+    def _load_skip_meshes(self) -> set[tuple[str, str]]:
+        """Load persistent skip list of problematic meshes.
+
+        File format (tab-separated):
+            class_title<TAB>mesh_id<TAB>timestamp<TAB>reason
+        """
+        skip_file = self._skip_mesh_log_path()
+        if not skip_file.exists():
+            return set()
+        skipped: set[tuple[str, str]] = set()
+        with skip_file.open('r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                parts = line.split('\t')
+                if len(parts) >= 2:
+                    skipped.add((parts[0], parts[1]))
+        return skipped
+
+    def _record_skip_mesh(self, class_title: str, mesh_id: str, reason: str) -> None:
+        """Append a problematic mesh to persistent skip list with metadata."""
+        skip_file = self._skip_mesh_log_path()
+        skip_file.parent.mkdir(parents=True, exist_ok=True)
+        reason_clean = ' '.join(reason.split())[:500]
+        ts = datetime.now(timezone.utc).isoformat()
+        with skip_file.open('a', encoding='utf-8') as f:
+            f.write(f'{class_title}\t{mesh_id}\t{ts}\t{reason_clean}\n')

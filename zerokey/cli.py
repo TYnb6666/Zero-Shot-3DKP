@@ -18,12 +18,14 @@ from zerokey.commands import baseline as baseline_cmd
 from zerokey.commands import metric as metric_cmd
 from zerokey.commands import vis as vis_cmd
 from zerokey.commands import data as data_cmd
+from zerokey.commands import feature as feature_cmd
 
 main.add_command(eval_cmd.eval_cmd, name='eval')
 main.add_command(baseline_cmd.baseline_group, name='baseline')
 main.add_command(metric_cmd.metric_group, name='metric')
 main.add_command(vis_cmd.vis_group, name='vis')
 main.add_command(data_cmd.data_group, name='data')
+main.add_command(feature_cmd.feature_group, name='feature')
 
 
 if __name__ == '__main__':

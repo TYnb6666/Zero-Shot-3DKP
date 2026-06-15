@@ -25,7 +25,7 @@ def feature_group() -> None:
 @click.option("--model-path", default="allenai/Molmo-7B-D-0924", show_default=True, help="Molmo model identifier or local path")
 @click.option("--output-name", default="molmo_vit_features.pt", show_default=True, help="Feature payload filename inside each mesh directory")
 @click.option("--selected-layers", default="-10,-3", show_default=True, help="Comma-separated ViT layer indices to concatenate")
-@click.option("--feature-dtype", type=click.Choice(["float32", "float16", "bfloat16", "keep"]), default="float32", show_default=True, help="Storage dtype for feature tensors")
+@click.option("--feature-dtype", type=click.Choice(["float32", "float16", "bfloat16", "keep"]), default="float16", show_default=True, help="Storage dtype for feature tensors; zbuf/cameras remain float32")
 @click.option("--save-zbuf/--no-save-zbuf", default=True, show_default=True, help="Save nearest-depth z-buffer per view")
 @click.option("--save-rgb-preview/--no-save-rgb-preview", default=False, show_default=True, help="Save per-view RGB preview PNGs")
 @click.option("--include-skipped/--exclude-skipped", default=False, show_default=True, help="Include meshes listed in skipped_meshes.txt")

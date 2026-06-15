@@ -65,7 +65,7 @@ class MolmoVitFeatureSaver:
         model_path: str = "allenai/Molmo-7B-D-0924",
         output_name: str = "molmo_vit_features.pt",
         selected_layers: Sequence[int] = (-10, -3),
-        feature_dtype: FeatureDType = "float32",
+        feature_dtype: FeatureDType = "float16",
         save_zbuf: bool = True,
         save_rgb_preview: bool = False,
         force: bool = False,

@@ -92,7 +92,10 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
                 cls.Multimodal = args[1]
 
     def __init__(self, log_dir: Union[str, os.PathLike] = Path(), expname: str = f'{type(Multimodal).__name__}PTS',
-                 res: int | tuple[int, int] = 512, scale: int | float = 2):
+                 res: int | tuple[int, int] = 512, scale: int | float = 2,
+                 use_molmo_vit_features: bool = False, molmo_vit_feature_dim: int = 64,
+                 molmo_vit_feature_scale: float = 0.1,
+                 molmo_vit_feature_file: str = 'molmo_vit_features.pt'):
         """Initialize the generator with output paths, rendering config, and viewpoints.
 
         Args:
@@ -100,6 +103,11 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
             expname: Experiment name used as subdirectory under log_dir.
             res: Base render resolution (pixels). Actual rendering is at res*scale.
             scale: Upscale factor; renders at res*scale then downscales for anti-aliasing.
+            use_molmo_vit_features: If True, append sampled cached Molmo ViT
+                features to the HDBSCAN clustering space.
+            molmo_vit_feature_dim: Random-projection output dimension before clustering.
+            molmo_vit_feature_scale: Scale applied to standardized reduced features.
+            molmo_vit_feature_file: Per-mesh feature-cache filename.
         """
         self.log_dir = Path(log_dir)
         self.expname = expname
@@ -111,11 +119,16 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         self.views = self.sample_view_points(self.dist, partition=3)
         self.proj_radius = 15
         self.kp_initialized_empty = True
+        self.use_molmo_vit_features = use_molmo_vit_features
+        self.molmo_vit_feature_dim = molmo_vit_feature_dim
+        self.molmo_vit_feature_scale = molmo_vit_feature_scale
+        self.molmo_vit_feature_file = molmo_vit_feature_file
         hires = (np.asarray(self.res) * self.scale).astype(np.int64)
         super(KPNetGenerator, self).__init__(self.device, res=hires.tolist())
 
     @torch.inference_mode()
-    def backproject_kps(self, mesh: Any, fragments: Any, cameras: CamerasBase, T: Any, kps: Any) -> Pointclouds:
+    def backproject_kps(self, mesh: Any, fragments: Any, cameras: CamerasBase, T: Any, kps: Any,
+                        molmo_vit_features: torch.Tensor | None = None) -> Pointclouds:
         """Project 2D keypoint detections from multiple views into 3D space.
 
         For each view that has detected keypoints, draws colored circles at the
@@ -181,15 +194,86 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
 
         # Concatenate the 3-channel color with the valid mask as 4th channel.
         # color.permute: [B, 3, H, W] -> [B, H, W, 3], then [mask] flattens to [N, 3].
-        # Result: [N, 4] uint8 features = [view_idx, class_id, alpha, valid]
-        color = torch.cat([color.permute(0, 2, 3, 1)[mask],
-                           valid_mask.to(dtype=color.dtype, device=color.device).unsqueeze(-1)], dim=-1)
+        # Result without ViT cache: [N, 4] uint8 features = [view_idx, class_id, alpha, valid].
+        point_features = torch.cat([color.permute(0, 2, 3, 1)[mask],
+                                    valid_mask.to(dtype=color.dtype, device=color.device).unsqueeze(-1)], dim=-1)
+        if molmo_vit_features is not None:
+            mask_coords = mask.nonzero(as_tuple=False)  # [N, 3] in view, y, x order
+            view_indices = mask_coords[:, 0].to(device=molmo_vit_features.device)
+            sample_coords = mask_coords[:, [2, 1]].to(device=molmo_vit_features.device, dtype=torch.float32)
+            sampled_features = self.sample_molmo_vit_features(molmo_vit_features, view_indices, sample_coords, imh, imw)
+            point_features = torch.cat(
+                [point_features.to(dtype=sampled_features.dtype, device=sampled_features.device), sampled_features],
+                dim=-1)
         pts_3d = Pointclouds(
             points=points[np.newaxis],
             normals=directions[np.newaxis],
-            features=color[np.newaxis])
+            features=point_features[np.newaxis])
 
         return pts_3d
+
+    @staticmethod
+    def sample2dfeat_bilinear(feat_2d: torch.Tensor, sample_coords: torch.Tensor, imh: int, imw: int) -> torch.Tensor:
+        """
+        Sample 2D feature maps with bilinear interpolation.
+
+        Args:
+            feat_2d: Tensor [B, C, H, W].
+            sample_coords: Tensor [B, N, 2] in source-image pixel coordinates, order (x, y).
+            imh: Source image height used by the coordinates.
+            imw: Source image width used by the coordinates.
+
+        Returns:
+            Tensor [B, N, C].
+        """
+        bsz, _channels, _height, _width = feat_2d.shape
+        num_samples = sample_coords.shape[1]
+        coords_normed = sample_coords.clone().float()
+        coords_normed[..., 0] = coords_normed[..., 0] * 2.0 / (imw - 1) - 1.0
+        coords_normed[..., 1] = coords_normed[..., 1] * 2.0 / (imh - 1) - 1.0
+        grid = coords_normed.view(bsz, num_samples, 1, 2)
+        sample_feats = F.grid_sample(
+            feat_2d.float(),
+            grid,
+            mode="bilinear",
+            padding_mode="zeros",
+            align_corners=True,
+        )
+        return sample_feats.squeeze(-1).permute(0, 2, 1)
+
+    def sample_molmo_vit_features(self, feat_maps: torch.Tensor, view_indices: torch.Tensor,
+                                  sample_coords: torch.Tensor, imh: int, imw: int) -> torch.Tensor:
+        """Sample reduced Molmo ViT feature maps at raw detection pixels."""
+        if sample_coords.numel() == 0:
+            return feat_maps.new_zeros((0, feat_maps.shape[-1]))
+        feat_nchw = feat_maps.permute(0, 3, 1, 2).contiguous()
+        sampled = feat_maps.new_zeros((sample_coords.shape[0], feat_maps.shape[-1]), dtype=torch.float32)
+        for view_idx in view_indices.unique(sorted=True):
+            point_mask = view_indices == view_idx
+            view = int(view_idx.item())
+            if view < 0 or view >= feat_nchw.shape[0]:
+                continue
+            coords = sample_coords[point_mask].view(1, -1, 2)
+            sampled[point_mask] = self.sample2dfeat_bilinear(feat_nchw[view:view + 1], coords, imh, imw)[0]
+        return sampled
+
+    def _molmo_vit_projection(self, in_dim: int, out_dim: int, device: torch.device) -> torch.Tensor:
+        """Create a deterministic Gaussian random projection matrix."""
+        generator = torch.Generator(device='cpu')
+        generator.manual_seed(0)
+        projection = torch.randn(in_dim, out_dim, generator=generator, dtype=torch.float32) / math.sqrt(out_dim)
+        return projection.to(device=device)
+
+    def reduce_molmo_vit_features(self, features: torch.Tensor) -> torch.Tensor:
+        """Reduce cached Molmo ViT maps to the configured clustering dimension."""
+        if features.ndim != 4:
+            raise ValueError(f'Expected Molmo ViT features [V,H,W,C], got {tuple(features.shape)}')
+        if features.shape[-1] == self.molmo_vit_feature_dim:
+            return features.to(device=self.device, dtype=torch.float32)
+        flat = features.to(device=self.device, dtype=torch.float32).reshape(-1, features.shape[-1])
+        projection = self._molmo_vit_projection(features.shape[-1], self.molmo_vit_feature_dim, self.device)
+        reduced = flat @ projection
+        return reduced.reshape(*features.shape[:-1], self.molmo_vit_feature_dim)
 
     def filter_draw_invalid_kps_with_images(self, images_with_kps: list[Image.Image], pts_3d: Pointclouds, kp: str, class_title: str, mesh_id: str) -> torch.Tensor:
         """Filter out invalid backprojections and annotate failed views with error text.
@@ -205,15 +289,17 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         # Features: [N, 4] uint8 = [view_idx, class_id, alpha, valid]
         features = pts_3d.features_packed()
         assert features is not None
-        valid_mask = features[..., -1].bool()
-        # Reinterpret first 2 uint8 channels as int16 for packed (view, class) IDs
-        valid_keypts = features[valid_mask, :2].view(dtype=torch.int16).unique().cpu().numpy()
-        invalid_keypts = features[torch.logical_not(valid_mask), :2].view(dtype=torch.int16).unique().cpu().numpy()
+        valid_mask = features[..., 3].bool()
+        # Pack (view, class) IDs robustly for both original uint8 features and
+        # extended float features with sampled Molmo ViT descriptors.
+        valid_keypts = (features[valid_mask, 0].long() * 256 + features[valid_mask, 1].long()).unique().cpu().numpy()
+        invalid_features = features[torch.logical_not(valid_mask)]
+        invalid_keypts = (invalid_features[:, 0].long() * 256 + invalid_features[:, 1].long()).unique().cpu().numpy()
         # Find (view, class) pairs that are ONLY invalid (never valid in any pixel)
         setdiff = np.setdiff1d(invalid_keypts, valid_keypts, assume_unique=True)
 
         # Count failures per view and annotate the images
-        for idx, count in Counter(x.tobytes()[0] for x in setdiff).items():
+        for idx, count in Counter(int(x) // 256 for x in setdiff).items():
             ImageDraw.Draw(images_with_kps[idx]).text((10, 10), f"KPS back-projection failed {count} times", fill='red')
 
         print(f"Drawing {kp} in those images of {class_title}", flush=True)
@@ -231,14 +317,15 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
           features[:, 2] - alpha/confidence weight (uint8)
           features[:, 3] - valid mask (uint8, 1 if backprojection ray faces camera)
 
-        The first two uint8 channels are reinterpreted as a single int16 via
-        .view(torch.int16) to form a packed (view, class) identifier per point.
-        This is used to compute per-class weight totals for cluster quality thresholding.
+        The first two channels are packed as ``view * 256 + class`` to compute
+        per-class weight totals for cluster quality thresholding.
         """
-        # Features are uint8 RGBA: [view_idx, class_id, alpha, valid]
-        features = pts_3d.features_packed()  # [N, 4], dtype=uint8
+        # Features are [view_idx, class_id, alpha, valid, optional_reduced_vit_features...].
+        # The optional feature tail lets HDBSCAN cluster in [xyz, sampled_feature]
+        # while centroid computation below still averages the original xyz points.
+        features = pts_3d.features_packed()
         assert features is not None
-        features_id, raw_weights, valid_mask = features[:, :2], features[:, 2], features[..., -1].bool()
+        valid_mask = features[..., 3].bool()
         all_pts = pts_3d.points_packed()
         assert all_pts is not None
         pts = all_pts[valid_mask]  # [M, 3], keep only valid backprojections
@@ -246,30 +333,32 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         if pts.size(0) <= 1:
             return Pointclouds(pts[None])
 
-        # Mean weight across all points (including invalid), used to normalize HDBSCAN weights
-        per_point_mean_weight = raw_weights.mean(dtype=torch.float32)
+        # Mean weight across all points (including invalid), used to normalize HDBSCAN weights.
+        per_point_mean_weight = features[:, 2].float().mean(dtype=torch.float32)
 
-        # Downsample if too many points, preserving features for class ID recovery
+        # Downsample if too many points, preserving metadata and optional sampled features.
         if pts.size(0) > max_points:
             pts_pc = Pointclouds(pts.unsqueeze(0), features=features[valid_mask].unsqueeze(0)).subsample(max_points)
-            # Reinterpret 2 uint8 channels as one int16 to get packed (view, class) identifier
             pts_feats = pts_pc.features_packed()
-            assert pts_feats is not None
-            features_id = pts_feats[:, :2].view(torch.int16).view(-1)
-            raw_weights = pts_feats[:, 2]  # [M]
             pts_packed = pts_pc.points_packed()
-            assert pts_packed is not None
+            assert pts_feats is not None and pts_packed is not None
             pts = pts_packed
         else:
-            raw_weights = raw_weights[valid_mask]
-            # Reinterpret 2 uint8 channels as one int16 to get packed (view, class) identifier
-            features_id = features_id[valid_mask].view(torch.int16).view(-1)
+            pts_feats = features[valid_mask]
+
+        raw_weights = pts_feats[:, 2].float()
+        features_id = pts_feats[:, 0].long() * 256 + pts_feats[:, 1].long()
+        sampled_vit_features = pts_feats[:, 4:].float() if pts_feats.shape[1] > 4 else None
 
         # Max total weight for any single semantic class — used as quality threshold
         per_point_max_weight = max(raw_weights[features_id == m].sum() for m in features_id.unique())
         # Normalize weights so HDBSCAN sees relative importance (typical max ~4)
-        np_weights = (raw_weights / per_point_mean_weight).cpu().numpy()
+        np_weights = (raw_weights / per_point_mean_weight.clamp_min(torch.finfo(torch.float32).eps)).cpu().numpy()
         np_pts = pts.cpu().numpy()
+        if sampled_vit_features is not None and sampled_vit_features.numel() > 0:
+            feat = sampled_vit_features
+            feat = (feat - feat.mean(dim=0, keepdim=True)) / feat.std(dim=0, keepdim=True, unbiased=False).clamp_min(1e-6)
+            np_pts = np.concatenate([np_pts, (feat * self.molmo_vit_feature_scale).cpu().numpy()], axis=1)
 
         # Retry HDBSCAN with progressively smaller min_cluster_size until clusters are found
         min_cluster_size = 10
@@ -321,7 +410,30 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
             Dict mapping prompt strings to pre-computed Pointclouds, or empty.
         """
         self.kp_initialized_empty = True
-        return {}
+        cache: dict[str, Any] = {}
+        if not self.use_molmo_vit_features:
+            return cache
+
+        feature_path = self.log_dir / self.expname / class_title / mesh_id / self.molmo_vit_feature_file
+        if not feature_path.exists():
+            print(f'[WARN] Molmo ViT feature cache not found, clustering in xyz only: {feature_path}', file=sys.stderr)
+            return cache
+
+        payload = torch.load(feature_path, map_location='cpu')
+        features = payload.get('features') if isinstance(payload, dict) else None
+        if not isinstance(features, torch.Tensor):
+            print(f'[WARN] Molmo ViT feature cache has no features tensor, clustering in xyz only: {feature_path}', file=sys.stderr)
+            return cache
+
+        reduced = self.reduce_molmo_vit_features(features)
+        if reduced.shape[0] != tensor_images.shape[0]:
+            print(
+                f'[WARN] Molmo ViT feature view count {reduced.shape[0]} does not match rendered views {tensor_images.shape[0]}, '
+                'clustering in xyz only',
+                file=sys.stderr)
+            return cache
+        cache['__molmo_vit_features__'] = reduced
+        return cache
 
     def process_kp_list(self, mesh: Meshes, fragments: Any, R: CamerasBase, T: Any, images: torch.Tensor, kp_list: dict[Any, Any], class_title: str, mesh_id: str, prompt_idx: int | slice = 0) -> dict[frozenset[Any], Pointclouds]:
         """Process all keypoint prompts: detect, backproject, and aggregate.
@@ -381,8 +493,11 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
                     kps_2d=kps,
                     num_views=int(images.size(0)),
                 )
-                # Backproject 2D detections -> 3D points with uint8 features
-                kps_3d = self.backproject_kps(mesh, fragments, R, T, kps)
+                # Backproject 2D detections -> 3D points with uint8 metadata,
+                # optionally appending sampled Molmo ViT descriptors per raw point.
+                kps_3d = self.backproject_kps(
+                    mesh, fragments, R, T, kps,
+                    molmo_vit_features=last_kp_cache.get('__molmo_vit_features__'))
                 if self.vis and images_with_kps:
                     # Filter invalid backprojections and save debug visualizations
                     valid_mask = self.filter_draw_invalid_kps_with_images(images_with_kps, kps_3d, kp_prompt, class_title, mesh_id)

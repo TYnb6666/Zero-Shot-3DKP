@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import click
 
 from zerokey._defaults import DEFAULT_LOG_DIR
-from zerokey.features.molmo_vit import FeatureDType, MolmoVitFeatureSaver
 
 
 @click.group(name="feature")
@@ -44,7 +44,7 @@ def molmo_vit_cmd(
     model_path: str,
     output_name: str,
     selected_layers: str,
-    feature_dtype: FeatureDType,
+    feature_dtype: str,
     save_zbuf: bool,
     save_rgb_preview: bool,
     include_skipped: bool,
@@ -55,6 +55,8 @@ def molmo_vit_cmd(
     batch_size: int,
 ) -> None:
     """Save Molmo ViT global-crop feature maps for KeypointNet meshes."""
+    from zerokey.features.molmo_vit import FeatureDType, MolmoVitFeatureSaver
+
     class_list = [item.strip() for item in classes.split(",") if item.strip()]
     layer_list = [int(item.strip()) for item in selected_layers.split(",") if item.strip()]
     saver = MolmoVitFeatureSaver(
@@ -66,7 +68,7 @@ def molmo_vit_cmd(
         model_path=model_path,
         output_name=output_name,
         selected_layers=layer_list,
-        feature_dtype=feature_dtype,
+        feature_dtype=cast(FeatureDType, feature_dtype),
         save_zbuf=save_zbuf,
         save_rgb_preview=save_rgb_preview,
         force=force,

@@ -27,7 +27,16 @@ from zerokey._defaults import DEFAULT_LOG_DIR
               help='0-based shard index for KeypointNet class-wise splitting')
 @click.option('--max-meshes', type=int, default=0, show_default=True,
               help='Stop after processing N selected meshes (0 = no limit)')
-def eval_cmd(log_dir: Path, expname: str, dataset: str, use_texture: bool, res: int, scale: int, num_shards: int, shard_id: int, max_meshes: int) -> None:
+@click.option('--use-molmo-vit-features/--no-molmo-vit-features', default=False, show_default=True,
+              help='Use cached per-view Molmo ViT features during KeypointNet clustering')
+@click.option('--molmo-vit-feature-dim', type=int, default=64, show_default=True,
+              help='Random-projection dimension for cached Molmo ViT features before clustering')
+@click.option('--molmo-vit-feature-scale', type=float, default=0.1, show_default=True,
+              help='Scale applied to standardized reduced Molmo ViT features in HDBSCAN space')
+@click.option('--molmo-vit-feature-file', default='molmo_vit_features.pt', show_default=True,
+              help='Per-mesh cached Molmo ViT feature filename')
+def eval_cmd(log_dir: Path, expname: str, dataset: str, use_texture: bool, res: int, scale: int, num_shards: int, shard_id: int, max_meshes: int,
+             use_molmo_vit_features: bool, molmo_vit_feature_dim: int, molmo_vit_feature_scale: float, molmo_vit_feature_file: str) -> None:
     """Run ZeroKey 3D keypoint detection
 
     Examples:
@@ -36,7 +45,16 @@ def eval_cmd(log_dir: Path, expname: str, dataset: str, use_texture: bool, res: 
     """
     if dataset == 'keypointnet':
         from zerokey.generators.kpnet import KPNetGenerator
-        generator = KPNetGenerator(log_dir, expname=expname, res=res, scale=scale)
+        generator = KPNetGenerator(
+            log_dir,
+            expname=expname,
+            res=res,
+            scale=scale,
+            use_molmo_vit_features=use_molmo_vit_features,
+            molmo_vit_feature_dim=molmo_vit_feature_dim,
+            molmo_vit_feature_scale=molmo_vit_feature_scale,
+            molmo_vit_feature_file=molmo_vit_feature_file,
+        )
         generator.main_loop(
             use_texture=use_texture,
             num_shards=num_shards,

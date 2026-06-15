@@ -35,8 +35,13 @@ from zerokey._defaults import DEFAULT_LOG_DIR
               help='Scale applied to standardized reduced Molmo ViT features in HDBSCAN space')
 @click.option('--molmo-vit-feature-file', default='molmo_vit_features.pt', show_default=True,
               help='Per-mesh cached Molmo ViT feature filename')
+@click.option('--molmo-vit-feature-expname', default='', show_default=True,
+              help='Source experiment name for cached Molmo ViT features (empty = current expname)')
+@click.option('--molmo-2d-expname', default='', show_default=True,
+              help='Source experiment name for cached raw Molmo 2D detections (empty = re-query Molmo)')
 def eval_cmd(log_dir: Path, expname: str, dataset: str, use_texture: bool, res: int, scale: int, num_shards: int, shard_id: int, max_meshes: int,
-             use_molmo_vit_features: bool, molmo_vit_feature_dim: int, molmo_vit_feature_scale: float, molmo_vit_feature_file: str) -> None:
+             use_molmo_vit_features: bool, molmo_vit_feature_dim: int, molmo_vit_feature_scale: float, molmo_vit_feature_file: str,
+             molmo_vit_feature_expname: str, molmo_2d_expname: str) -> None:
     """Run ZeroKey 3D keypoint detection
 
     Examples:
@@ -54,6 +59,8 @@ def eval_cmd(log_dir: Path, expname: str, dataset: str, use_texture: bool, res: 
             molmo_vit_feature_dim=molmo_vit_feature_dim,
             molmo_vit_feature_scale=molmo_vit_feature_scale,
             molmo_vit_feature_file=molmo_vit_feature_file,
+            molmo_vit_feature_expname=molmo_vit_feature_expname or None,
+            molmo_2d_expname=molmo_2d_expname or None,
         )
         generator.main_loop(
             use_texture=use_texture,

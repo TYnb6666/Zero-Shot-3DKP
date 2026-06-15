@@ -1,5 +1,6 @@
 """Zero-shot 3D keypoint detection pipeline using multi-view MLLM queries and HDBSCAN clustering."""
 
+import json
 import math
 import os
 import sys
@@ -95,7 +96,9 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
                  res: int | tuple[int, int] = 512, scale: int | float = 2,
                  use_molmo_vit_features: bool = False, molmo_vit_feature_dim: int = 64,
                  molmo_vit_feature_scale: float = 0.1,
-                 molmo_vit_feature_file: str = 'molmo_vit_features.pt'):
+                 molmo_vit_feature_file: str = 'molmo_vit_features.pt',
+                 molmo_vit_feature_expname: str | None = None,
+                 molmo_2d_expname: str | None = None):
         """Initialize the generator with output paths, rendering config, and viewpoints.
 
         Args:
@@ -108,6 +111,8 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
             molmo_vit_feature_dim: Random-projection output dimension before clustering.
             molmo_vit_feature_scale: Scale applied to standardized reduced features.
             molmo_vit_feature_file: Per-mesh feature-cache filename.
+            molmo_vit_feature_expname: Optional source experiment for cached features.
+            molmo_2d_expname: Optional source experiment for cached raw Molmo 2D detections.
         """
         self.log_dir = Path(log_dir)
         self.expname = expname
@@ -123,6 +128,8 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         self.molmo_vit_feature_dim = molmo_vit_feature_dim
         self.molmo_vit_feature_scale = molmo_vit_feature_scale
         self.molmo_vit_feature_file = molmo_vit_feature_file
+        self.molmo_vit_feature_expname = molmo_vit_feature_expname
+        self.molmo_2d_expname = molmo_2d_expname
         hires = (np.asarray(self.res) * self.scale).astype(np.int64)
         super(KPNetGenerator, self).__init__(self.device, res=hires.tolist())
 
@@ -414,7 +421,8 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         if not self.use_molmo_vit_features:
             return cache
 
-        feature_path = self.log_dir / self.expname / class_title / mesh_id / self.molmo_vit_feature_file
+        feature_expname = self.molmo_vit_feature_expname or self.expname
+        feature_path = self.log_dir / feature_expname / class_title / mesh_id / self.molmo_vit_feature_file
         if not feature_path.exists():
             print(f'[WARN] Molmo ViT feature cache not found, clustering in xyz only: {feature_path}', file=sys.stderr)
             return cache
@@ -434,6 +442,30 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
             return cache
         cache['__molmo_vit_features__'] = reduced
         return cache
+
+    def load_cached_kps_2d(self, class_title: str, mesh_id: str, semantic_ids: list[Any], prompt: str) -> dict[int, Any] | None:
+        """Load raw Molmo 2D detections from another experiment, if configured."""
+        if self.molmo_2d_expname is None:
+            return None
+        semantic_token = ','.join(map(str, map(int, semantic_ids))) if semantic_ids else 'none'
+        prompt_token = KPNetIO._safe_filename_token(prompt)
+        cache_path = (
+            self.log_dir / self.molmo_2d_expname / class_title / mesh_id /
+            f'Molmo2D_{semantic_token}_{prompt_token}_kps2d.json'
+        )
+        if not cache_path.exists():
+            print(f'[WARN] Cached Molmo 2D detections not found, re-querying Molmo: {cache_path}', file=sys.stderr)
+            return None
+        try:
+            payload = json.loads(cache_path.read_text(encoding='utf-8'))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f'[WARN] Failed to load cached Molmo 2D detections from {cache_path}: {exc}', file=sys.stderr)
+            return None
+        kps_2d = payload.get('kps_2d')
+        if not isinstance(kps_2d, dict):
+            print(f'[WARN] Cached Molmo 2D payload has no kps_2d dict, re-querying Molmo: {cache_path}', file=sys.stderr)
+            return None
+        return {int(view_idx): coords for view_idx, coords in kps_2d.items()}
 
     def process_kp_list(self, mesh: Meshes, fragments: Any, R: CamerasBase, T: Any, images: torch.Tensor, kp_list: dict[Any, Any], class_title: str, mesh_id: str, prompt_idx: int | slice = 0) -> dict[frozenset[Any], Pointclouds]:
         """Process all keypoint prompts: detect, backproject, and aggregate.
@@ -478,8 +510,10 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
             # reuse them. Otherwise, run MLLM detection.
             images_with_kps: List[Image.Image] = []
             if (kps_3d := last_kp_cache.get(kp_prompt, None)) is None:
-                # Detect 2D keypoints in all views for this prompt
-                kps, images_with_kps = self.detect_kps(images, kp_prompt, cat=class_title)
+                kps = self.load_cached_kps_2d(class_title, mesh_id, semantic_ids, kp_prompt)
+                if kps is None:
+                    # Detect 2D keypoints in all views for this prompt
+                    kps, images_with_kps = self.detect_kps(images, kp_prompt, cat=class_title)
             else:
                 # Cache hit: skip detection if not kp_initialized_empty
                 kps = None if self.kp_initialized_empty else kps_3d

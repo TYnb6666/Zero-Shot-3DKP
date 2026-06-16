@@ -236,15 +236,19 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         bsz, _channels, _height, _width = feat_2d.shape
         num_samples = sample_coords.shape[1]
         coords_normed = sample_coords.clone().float()
-        coords_normed[..., 0] = coords_normed[..., 0] * 2.0 / (imw - 1) - 1.0
-        coords_normed[..., 1] = coords_normed[..., 1] * 2.0 / (imh - 1) - 1.0
+        # Treat sample_coords as pixel-center coordinates in the source render/depth
+        # image. With align_corners=False, normalized coordinates map feature-cell
+        # centers rather than forcing the outermost input pixels onto the outermost
+        # feature centers, which avoids an edge-dependent half-patch drift.
+        coords_normed[..., 0] = (coords_normed[..., 0] + 0.5) * 2.0 / imw - 1.0
+        coords_normed[..., 1] = (coords_normed[..., 1] + 0.5) * 2.0 / imh - 1.0
         grid = coords_normed.view(bsz, num_samples, 1, 2)
         sample_feats = F.grid_sample(
             feat_2d.float(),
             grid,
             mode="bilinear",
             padding_mode="zeros",
-            align_corners=True,
+            align_corners=False,
         )
         return sample_feats.squeeze(-1).permute(0, 2, 1)
 

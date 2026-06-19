@@ -122,6 +122,15 @@ def parse_args() -> argparse.Namespace:
         default="ShapeNetCore.v2.ply",
         help="Mesh subdirectory under --keypointnet-dir.",
     )
+    parser.add_argument(
+        "--ray-engine",
+        choices=("triangle", "pyembree"),
+        default="triangle",
+        help=(
+            "Trimesh ray backend for visibility. Default triangle avoids observed "
+            "pyembree segmentation faults; pyembree may be faster but less stable."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -202,7 +211,8 @@ def get_camera_batch(mesh: Any, views: np.ndarray, device: Any) -> Any:
 
 
 def ray_visible_mask(
-    mesh_tri: Any,
+    ray_intersector: Any,
+    mesh_bounds: np.ndarray,
     camera_center: np.ndarray,
     gt_points: Sequence[Sequence[float]],
     threshold_ratio: float,
@@ -215,7 +225,7 @@ def ray_visible_mask(
     dirs = dirs / (np.linalg.norm(dirs, axis=-1, keepdims=True) + 1e-12)
 
     try:
-        locations, index_ray, _index_tri = mesh_tri.ray.intersects_location(
+        locations, index_ray, _index_tri = ray_intersector.intersects_location(
             ray_origins=centers,
             ray_directions=dirs,
             multiple_hits=False,
@@ -225,7 +235,7 @@ def ray_visible_mask(
         return [False] * len(gt_points)
 
     gt_dists = np.linalg.norm(gt_np - centers, axis=-1)
-    bbox_diag = float(np.linalg.norm(mesh_tri.bounds[1] - mesh_tri.bounds[0]))
+    bbox_diag = float(np.linalg.norm(mesh_bounds[1] - mesh_bounds[0]))
     threshold = bbox_diag * threshold_ratio
 
     visible = [False] * len(gt_points)
@@ -271,7 +281,8 @@ def project_visible_gt(
     gt_points: list[dict[str, Any]],
     camera: Any,
     camera_center: np.ndarray,
-    mesh_tri: Any,
+    ray_intersector: Any,
+    mesh_bounds: np.ndarray,
     res: int,
     visibility_threshold_ratio: float,
     device: Any,
@@ -282,7 +293,7 @@ def project_visible_gt(
     gt_tensor = torch.tensor(xyz, dtype=torch.float32, device=device).unsqueeze(0)
     with torch.no_grad():
         screen = camera.transform_points_screen(gt_tensor, image_size=(res, res))[0].detach().cpu().numpy()
-    ray_visible = ray_visible_mask(mesh_tri, camera_center, xyz, visibility_threshold_ratio)
+    ray_visible = ray_visible_mask(ray_intersector, mesh_bounds, camera_center, xyz, visibility_threshold_ratio)
 
     visible: list[VisibleGT] = []
     for point, coords, occl_free in zip(gt_points, screen, ray_visible):
@@ -584,6 +595,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
 
     mesh_cache: dict[Path, Meshes] = {}
     trimesh_cache: dict[Path, trimesh.Trimesh] = {}
+    ray_intersector_cache: dict[Path, Any] = {}
     camera_cache: dict[Path, CamerasBase] = {}
 
     error_rows: list[dict[str, Any]] = []
@@ -597,6 +609,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
     print(f"classes={','.join(args.classes)}")
     print(f"res={args.res}")
     print(f"visibility_threshold_ratio={args.visibility_threshold_ratio}")
+    print(f"ray_engine={args.ray_engine}")
     print(f"min_visible_detections_per_view={args.min_visible_detections_per_view}")
     print("=" * 120)
 
@@ -635,11 +648,19 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
                 if not isinstance(mesh_obj, Meshes):
                     mesh_obj = Meshes(verts=[mesh_obj.verts_packed()], faces=[mesh_obj.faces_packed()])
                 mesh_cache[mesh_path] = mesh_obj.to(device)
-                trimesh_cache[mesh_path] = trimesh.load(str(mesh_path), force="mesh")
+                mesh_tri = trimesh.load(str(mesh_path), force="mesh")
+                trimesh_cache[mesh_path] = mesh_tri
+                if args.ray_engine == "triangle":
+                    from trimesh.ray.ray_triangle import RayMeshIntersector  # noqa: PLC0415
+                    ray_intersector_cache[mesh_path] = RayMeshIntersector(mesh_tri)
+                else:
+                    # pyembree can be faster, but has caused native segfaults in some environments.
+                    ray_intersector_cache[mesh_path] = mesh_tri.ray
                 camera_cache[mesh_path] = get_camera_batch(mesh_cache[mesh_path], views, device)
 
             mesh = mesh_cache[mesh_path]
             mesh_tri = trimesh_cache[mesh_path]
+            ray_intersector = ray_intersector_cache[mesh_path]
             cameras = camera_cache[mesh_path]
             camera_centers = cameras.get_camera_center().detach().cpu().numpy()
 
@@ -686,7 +707,8 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
                         gt_points,
                         camera,
                         camera_centers[view_idx],
-                        mesh_tri,
+                        ray_intersector,
+                        mesh_tri.bounds,
                         args.res,
                         args.visibility_threshold_ratio,
                         device,
@@ -808,6 +830,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
         "view_radius": args.view_radius,
         "view_partition": args.view_partition,
         "visibility_threshold_ratio": args.visibility_threshold_ratio,
+        "ray_engine": args.ray_engine,
         "min_visible_detections_per_view": args.min_visible_detections_per_view,
         "num_error_rows": len(error_rows),
         "num_mesh_view_rows": len(mesh_view_rows),

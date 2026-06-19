@@ -124,12 +124,30 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--ray-engine",
-        choices=("triangle", "pyembree"),
-        default="triangle",
+        choices=("zbuf", "triangle", "pyembree"),
+        default="zbuf",
         help=(
-            "Trimesh ray backend for visibility. Default triangle avoids observed "
-            "pyembree segmentation faults; pyembree may be faster but less stable."
+            "Visibility backend. Default zbuf uses PyTorch3D rasterized depth and avoids "
+            "pyembree segfaults and triangle-backend rtree requirements."
         ),
+    )
+    parser.add_argument(
+        "--zbuf-depth-threshold",
+        type=float,
+        default=0.01,
+        help="Absolute screen/NDC z tolerance for z-buffer visibility checks.",
+    )
+    parser.add_argument(
+        "--zbuf-window-radius",
+        type=int,
+        default=1,
+        help="Pixel window radius around projected GT used for z-buffer visibility checks.",
+    )
+    parser.add_argument(
+        "--render-batch-size",
+        type=int,
+        default=4,
+        help="Number of views to rasterize at once when --ray-engine=zbuf.",
     )
     return parser.parse_args()
 
@@ -210,6 +228,35 @@ def get_camera_batch(mesh: Any, views: np.ndarray, device: Any) -> Any:
     return camera_from_eye_at_up(eyes, target, device=device)
 
 
+def zbuf_visible_mask(
+    screen: np.ndarray,
+    zbuf_view: Any,
+    z_threshold: float,
+    window_radius: int,
+) -> list[bool]:
+    if screen.size == 0:
+        return []
+    zbuf_np = zbuf_view.detach().cpu().numpy() if hasattr(zbuf_view, "detach") else np.asarray(zbuf_view)
+    height, width = zbuf_np.shape
+    visible: list[bool] = []
+    radius = max(0, int(window_radius))
+    for x, y, z in screen:
+        xi = int(round(float(x)))
+        yi = int(round(float(y)))
+        if not (z > 0 and 0 <= xi < width and 0 <= yi < height):
+            visible.append(False)
+            continue
+        x0, x1 = max(0, xi - radius), min(width, xi + radius + 1)
+        y0, y1 = max(0, yi - radius), min(height, yi + radius + 1)
+        patch = zbuf_np[y0:y1, x0:x1]
+        patch = patch[np.isfinite(patch) & (patch > 0)]
+        if patch.size == 0:
+            visible.append(False)
+            continue
+        visible.append(float(np.min(np.abs(patch - float(z)))) <= z_threshold)
+    return visible
+
+
 def ray_visible_mask(
     ray_intersector: Any,
     mesh_bounds: np.ndarray,
@@ -281,10 +328,14 @@ def project_visible_gt(
     gt_points: list[dict[str, Any]],
     camera: Any,
     camera_center: np.ndarray,
-    ray_intersector: Any,
-    mesh_bounds: np.ndarray,
+    ray_intersector: Any | None,
+    mesh_bounds: np.ndarray | None,
+    zbuf_view: Any | None,
+    ray_engine: str,
     res: int,
     visibility_threshold_ratio: float,
+    zbuf_depth_threshold: float,
+    zbuf_window_radius: int,
     device: Any,
 ) -> list[VisibleGT]:
     if not gt_points:
@@ -293,7 +344,16 @@ def project_visible_gt(
     gt_tensor = torch.tensor(xyz, dtype=torch.float32, device=device).unsqueeze(0)
     with torch.no_grad():
         screen = camera.transform_points_screen(gt_tensor, image_size=(res, res))[0].detach().cpu().numpy()
-    ray_visible = ray_visible_mask(ray_intersector, mesh_bounds, camera_center, xyz, visibility_threshold_ratio)
+    if ray_engine == "zbuf":
+        if zbuf_view is None:
+            ray_visible = [False] * len(gt_points)
+        else:
+            ray_visible = zbuf_visible_mask(screen, zbuf_view, zbuf_depth_threshold, zbuf_window_radius)
+    else:
+        if ray_intersector is None or mesh_bounds is None:
+            ray_visible = [False] * len(gt_points)
+        else:
+            ray_visible = ray_visible_mask(ray_intersector, mesh_bounds, camera_center, xyz, visibility_threshold_ratio)
 
     visible: list[VisibleGT] = []
     for point, coords, occl_free in zip(gt_points, screen, ray_visible):
@@ -336,6 +396,19 @@ def add_error_row(
         "error_px": error,
         "visibility_threshold_ratio": float(visibility_threshold_ratio),
     })
+
+
+def render_zbuf_views(renderer: Any, mesh: Any, cameras: Any, batch_size: int) -> Any:
+    zbuf_parts = []
+    num_views = len(cameras)
+    batch = max(1, int(batch_size))
+    with torch.no_grad():
+        for start in range(0, num_views, batch):
+            stop = min(num_views, start + batch)
+            cam_batch = cameras[torch.arange(start, stop, device=cameras.device)]
+            fragments = renderer.rasterizer(mesh.extend(stop - start), cameras=cam_batch)
+            zbuf_parts.append(fragments.zbuf[..., 0].detach().cpu())
+    return torch.cat(zbuf_parts, dim=0)
 
 
 def evaluate_detection_matches(
@@ -572,12 +645,13 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
     from kp_utils.data.keypoint_labels import INVERSE_CLASS_MAPPING  # noqa: PLC0415
     from kp_utils.data.utils import load_keypoints  # noqa: PLC0415
 
-    global torch, IO, Meshes, trimesh, sample_view_points, camera_from_eye_at_up
+    global torch, IO, Meshes, trimesh, sample_view_points, camera_from_eye_at_up, setup_renderer
     import torch as torch_module  # noqa: PLC0415
     from pytorch3d.io import IO as IOClass  # noqa: PLC0415
     from pytorch3d.structures import Meshes as MeshesClass  # noqa: PLC0415
     import trimesh as trimesh_module  # noqa: PLC0415
     from kp_utils.rendering import sample_view_points as sample_view_points_func  # noqa: PLC0415
+    from kp_utils.rendering import setup_renderer as setup_renderer_func  # noqa: PLC0415
     from zerokey.rendering import camera_from_eye_at_up as camera_from_eye_at_up_func  # noqa: PLC0415
 
     torch = torch_module
@@ -586,16 +660,19 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
     trimesh = trimesh_module
     sample_view_points = sample_view_points_func
     camera_from_eye_at_up = camera_from_eye_at_up_func
+    setup_renderer = setup_renderer_func
 
     device_name = "cuda" if args.device == "auto" and torch.cuda.is_available() else ("cpu" if args.device == "auto" else args.device)
     device = torch.device(device_name)
     io = IO()
     all_keypoints = load_keypoints()
     views = sample_view_points(args.view_radius, args.view_partition)
+    renderer = setup_renderer(device, res=args.res) if args.ray_engine == "zbuf" else None
 
     mesh_cache: dict[Path, Meshes] = {}
     trimesh_cache: dict[Path, trimesh.Trimesh] = {}
     ray_intersector_cache: dict[Path, Any] = {}
+    zbuf_cache: dict[Path, Any] = {}
     camera_cache: dict[Path, CamerasBase] = {}
 
     error_rows: list[dict[str, Any]] = []
@@ -610,6 +687,10 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
     print(f"res={args.res}")
     print(f"visibility_threshold_ratio={args.visibility_threshold_ratio}")
     print(f"ray_engine={args.ray_engine}")
+    if args.ray_engine == "zbuf":
+        print(f"zbuf_depth_threshold={args.zbuf_depth_threshold}")
+        print(f"zbuf_window_radius={args.zbuf_window_radius}")
+        print(f"render_batch_size={args.render_batch_size}")
     print(f"min_visible_detections_per_view={args.min_visible_detections_per_view}")
     print("=" * 120)
 
@@ -648,19 +729,26 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
                 if not isinstance(mesh_obj, Meshes):
                     mesh_obj = Meshes(verts=[mesh_obj.verts_packed()], faces=[mesh_obj.faces_packed()])
                 mesh_cache[mesh_path] = mesh_obj.to(device)
-                mesh_tri = trimesh.load(str(mesh_path), force="mesh")
-                trimesh_cache[mesh_path] = mesh_tri
-                if args.ray_engine == "triangle":
-                    from trimesh.ray.ray_triangle import RayMeshIntersector  # noqa: PLC0415
-                    ray_intersector_cache[mesh_path] = RayMeshIntersector(mesh_tri)
-                else:
-                    # pyembree can be faster, but has caused native segfaults in some environments.
-                    ray_intersector_cache[mesh_path] = mesh_tri.ray
                 camera_cache[mesh_path] = get_camera_batch(mesh_cache[mesh_path], views, device)
+                if args.ray_engine == "zbuf":
+                    assert renderer is not None
+                    zbuf_cache[mesh_path] = render_zbuf_views(renderer, mesh_cache[mesh_path], camera_cache[mesh_path], args.render_batch_size)
+                    trimesh_cache[mesh_path] = None
+                    ray_intersector_cache[mesh_path] = None
+                else:
+                    mesh_tri = trimesh.load(str(mesh_path), force="mesh")
+                    trimesh_cache[mesh_path] = mesh_tri
+                    if args.ray_engine == "triangle":
+                        from trimesh.ray.ray_triangle import RayMeshIntersector  # noqa: PLC0415
+                        ray_intersector_cache[mesh_path] = RayMeshIntersector(mesh_tri)
+                    else:
+                        # pyembree can be faster, but has caused native segfaults in some environments.
+                        ray_intersector_cache[mesh_path] = mesh_tri.ray
 
             mesh = mesh_cache[mesh_path]
             mesh_tri = trimesh_cache[mesh_path]
             ray_intersector = ray_intersector_cache[mesh_path]
+            zbuf_views = zbuf_cache.get(mesh_path)
             cameras = camera_cache[mesh_path]
             camera_centers = cameras.get_camera_center().detach().cpu().numpy()
 
@@ -708,9 +796,13 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
                         camera,
                         camera_centers[view_idx],
                         ray_intersector,
-                        mesh_tri.bounds,
+                        None if mesh_tri is None else mesh_tri.bounds,
+                        None if zbuf_views is None else zbuf_views[view_idx],
+                        args.ray_engine,
                         args.res,
                         args.visibility_threshold_ratio,
+                        args.zbuf_depth_threshold,
+                        args.zbuf_window_radius,
                         device,
                     )
                     if visible_gt:
@@ -831,6 +923,9 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
         "view_partition": args.view_partition,
         "visibility_threshold_ratio": args.visibility_threshold_ratio,
         "ray_engine": args.ray_engine,
+        "zbuf_depth_threshold": args.zbuf_depth_threshold,
+        "zbuf_window_radius": args.zbuf_window_radius,
+        "render_batch_size": args.render_batch_size,
         "min_visible_detections_per_view": args.min_visible_detections_per_view,
         "num_error_rows": len(error_rows),
         "num_mesh_view_rows": len(mesh_view_rows),

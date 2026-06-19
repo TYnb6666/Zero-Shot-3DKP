@@ -845,6 +845,20 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
                     "no_gt_annotation_predictions": prompt_no_gt_predictions,
                 })
 
+            # Each mesh is processed exactly once, so release large per-mesh GPU/CPU
+            # objects immediately.  In particular, zbuf_views is roughly
+            # num_views * res * res * 4 bytes (about 100 MB at 26x1024x1024),
+            # so caching all meshes can make the OS kill the process without a
+            # Python traceback.
+            mesh_cache.pop(mesh_path, None)
+            trimesh_cache.pop(mesh_path, None)
+            ray_intersector_cache.pop(mesh_path, None)
+            zbuf_cache.pop(mesh_path, None)
+            camera_cache.pop(mesh_path, None)
+            del mesh, mesh_tri, ray_intersector, zbuf_views, cameras, camera_centers
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
+
     mesh_view_rows = aggregate_mesh_view_rows(error_rows)
     mesh_best_rows = select_mesh_best_views(mesh_view_rows, args.min_visible_detections_per_view)
     class_best_rows = aggregate_class_best_stats(mesh_best_rows)

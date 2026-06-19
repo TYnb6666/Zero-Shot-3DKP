@@ -149,6 +149,15 @@ def parse_args() -> argparse.Namespace:
         default=4,
         help="Number of views to rasterize at once when --ray-engine=zbuf.",
     )
+    parser.add_argument(
+        "--raster-bin-size",
+        type=int,
+        default=0,
+        help=(
+            "PyTorch3D rasterizer bin_size for zbuf visibility. Default 0 uses "
+            "naive rasterization to avoid coarse rasterization overflow warnings."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -667,7 +676,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
     io = IO()
     all_keypoints = load_keypoints()
     views = sample_view_points(args.view_radius, args.view_partition)
-    renderer = setup_renderer(device, res=args.res) if args.ray_engine == "zbuf" else None
+    renderer = setup_renderer(device, res=args.res, bin_size=args.raster_bin_size) if args.ray_engine == "zbuf" else None
 
     mesh_cache: dict[Path, Meshes] = {}
     trimesh_cache: dict[Path, trimesh.Trimesh] = {}
@@ -691,6 +700,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
         print(f"zbuf_depth_threshold={args.zbuf_depth_threshold}")
         print(f"zbuf_window_radius={args.zbuf_window_radius}")
         print(f"render_batch_size={args.render_batch_size}")
+        print(f"raster_bin_size={args.raster_bin_size}")
     print(f"min_visible_detections_per_view={args.min_visible_detections_per_view}")
     print("=" * 120)
 
@@ -926,6 +936,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
         "zbuf_depth_threshold": args.zbuf_depth_threshold,
         "zbuf_window_radius": args.zbuf_window_radius,
         "render_batch_size": args.render_batch_size,
+        "raster_bin_size": args.raster_bin_size,
         "min_visible_detections_per_view": args.min_visible_detections_per_view,
         "num_error_rows": len(error_rows),
         "num_mesh_view_rows": len(mesh_view_rows),

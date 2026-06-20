@@ -6,9 +6,9 @@ This utility reads saved ``Molmo2D_*_kps2d.json`` files, projects KeypointNet
 views where the target GT keypoints are occluded using trimesh ray casting, and
 reports best-case per-mesh/per-class Molmo view accuracy statistics.
 
-It intentionally evaluates **Molmo2D vs visible GT**, not final ZeroKey 3D
-predictions.  Occluded-view Molmo predictions are counted separately and are not
-included in error statistics.
+It intentionally evaluates **Molmo2D vs GT projections**, not final ZeroKey 3D
+predictions.  Visible and occluded in-frame GT projections are reported
+separately so hallucinated predictions on occluded targets can be quantified.
 """
 
 from __future__ import annotations
@@ -46,6 +46,15 @@ class VisibleGT:
     x: float
     y: float
     z: float
+
+
+@dataclass(frozen=True)
+class ProjectedGT:
+    semantic_id: int
+    x: float
+    y: float
+    z: float
+    visible: bool
 
 
 def parse_args() -> argparse.Namespace:
@@ -333,7 +342,7 @@ def collect_gt_points(gt_kps: Iterable[dict[str, Any]], semantic_ids: set[int]) 
     return points
 
 
-def project_visible_gt(
+def project_gt_with_visibility(
     gt_points: list[dict[str, Any]],
     camera: Any,
     camera_center: np.ndarray,
@@ -346,7 +355,8 @@ def project_visible_gt(
     zbuf_depth_threshold: float,
     zbuf_window_radius: int,
     device: Any,
-) -> list[VisibleGT]:
+) -> list[ProjectedGT]:
+    """Project prompt GT into a view and mark each in-bounds point as visible/occluded."""
     if not gt_points:
         return []
     xyz = [point["xyz"] for point in gt_points]
@@ -364,12 +374,16 @@ def project_visible_gt(
         else:
             ray_visible = ray_visible_mask(ray_intersector, mesh_bounds, camera_center, xyz, visibility_threshold_ratio)
 
-    visible: list[VisibleGT] = []
+    projected: list[ProjectedGT] = []
     for point, coords, occl_free in zip(gt_points, screen, ray_visible):
         x, y, z = map(float, coords.tolist())
-        if z > 0 and 0 <= x < res and 0 <= y < res and occl_free:
-            visible.append(VisibleGT(int(point["semantic_id"]), x, y, z))
-    return visible
+        if z > 0 and 0 <= x < res and 0 <= y < res:
+            projected.append(ProjectedGT(int(point["semantic_id"]), x, y, z, bool(occl_free)))
+    return projected
+
+
+def to_visible_gt(gt: ProjectedGT) -> VisibleGT:
+    return VisibleGT(gt.semantic_id, gt.x, gt.y, gt.z)
 
 
 def add_error_row(
@@ -383,6 +397,7 @@ def add_error_row(
     detection: Detection,
     gt: VisibleGT,
     match_mode: str,
+    visibility_bucket: str,
     res: int,
     visibility_threshold_ratio: float,
 ) -> None:
@@ -396,6 +411,7 @@ def add_error_row(
         "view_idx": int(view_idx),
         "detection_index": int(detection.index),
         "match_mode": match_mode,
+        "visibility_bucket": visibility_bucket,
         "matched_semantic_id": int(gt.semantic_id),
         "molmo_px": molmo_px,
         "molmo_py": molmo_py,
@@ -429,42 +445,56 @@ def evaluate_detection_matches(
     semantic_ids: list[int],
     view_idx: int,
     detections: list[Detection],
-    visible_gt: list[VisibleGT],
+    projected_gt: list[ProjectedGT],
     res: int,
     visibility_threshold_ratio: float,
 ) -> dict[str, int]:
     counts = Counter()
     if not detections:
         return counts
-    if not visible_gt:
+    visible_gt = [to_visible_gt(gt) for gt in projected_gt if gt.visible]
+    occluded_gt = [to_visible_gt(gt) for gt in projected_gt if not gt.visible]
+    if not visible_gt and occluded_gt:
         counts["occluded_gt_but_molmo_predicted"] += len(detections)
+    if not visible_gt and not occluded_gt:
+        counts["out_of_frame_gt_but_molmo_predicted"] += len(detections)
         return counts
 
-    # group_oracle: lower-bound/best-case nearest visible GT within the prompt group.
-    for detection in detections:
-        molmo_px, molmo_py = molmo_to_pixel(detection, res)
-        nearest = min(visible_gt, key=lambda gt: math.hypot(molmo_px - gt.x, molmo_py - gt.y))
-        add_error_row(
-            rows,
-            class_title=class_title,
-            mesh_id=mesh_id,
-            prompt=prompt,
-            semantic_ids=semantic_ids,
-            view_idx=view_idx,
-            detection=detection,
-            gt=nearest,
-            match_mode="group_oracle",
-            res=res,
-            visibility_threshold_ratio=visibility_threshold_ratio,
-        )
-        counts["group_oracle_evaluable"] += 1
+    # group_oracle: lower-bound/best-case nearest GT within the prompt group.
+    # Prefer visible GT for normal rows. If none are visible, evaluate the same
+    # detections against occluded in-frame GT so we can quantify hallucinated
+    # predictions instead of only counting them.
+    for bucket, candidates in (("visible", visible_gt), ("occluded", [] if visible_gt else occluded_gt)):
+        if not candidates:
+            continue
+        for detection in detections:
+            molmo_px, molmo_py = molmo_to_pixel(detection, res)
+            nearest = min(candidates, key=lambda gt: math.hypot(molmo_px - gt.x, molmo_py - gt.y))
+            add_error_row(
+                rows,
+                class_title=class_title,
+                mesh_id=mesh_id,
+                prompt=prompt,
+                semantic_ids=semantic_ids,
+                view_idx=view_idx,
+                detection=detection,
+                gt=nearest,
+                match_mode="group_oracle",
+                visibility_bucket=bucket,
+                res=res,
+                visibility_threshold_ratio=visibility_threshold_ratio,
+            )
+            counts[f"group_oracle_{bucket}_evaluable"] += 1
 
     # strict_single: only unambiguous single-semantic prompts are evaluated.
     if len(semantic_ids) == 1:
         sid = semantic_ids[0]
-        strict_gt = [gt for gt in visible_gt if gt.semantic_id == sid]
-        if strict_gt:
-            gt = strict_gt[0]
+        strict_visible = [gt for gt in visible_gt if gt.semantic_id == sid]
+        strict_occluded = [gt for gt in occluded_gt if gt.semantic_id == sid]
+        for bucket, candidates in (("visible", strict_visible), ("occluded", [] if strict_visible else strict_occluded)):
+            if not candidates:
+                continue
+            gt = candidates[0]
             for detection in detections:
                 add_error_row(
                     rows,
@@ -476,12 +506,13 @@ def evaluate_detection_matches(
                     detection=detection,
                     gt=gt,
                     match_mode="strict_single",
+                    visibility_bucket=bucket,
                     res=res,
                     visibility_threshold_ratio=visibility_threshold_ratio,
                 )
-                counts["strict_single_evaluable"] += 1
-        else:
-            counts["strict_single_occluded"] += len(detections)
+                counts[f"strict_single_{bucket}_evaluable"] += 1
+        if not strict_visible and not strict_occluded:
+            counts["strict_single_out_of_frame"] += len(detections)
     else:
         counts["strict_single_skipped_multisemantic"] += len(detections)
 
@@ -491,6 +522,8 @@ def evaluate_detection_matches(
 def aggregate_mesh_view_rows(error_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[tuple[str, str, str, int], list[float]] = defaultdict(list)
     for row in error_rows:
+        if row.get("visibility_bucket") != "visible":
+            continue
         key = (row["match_mode"], row["class_title"], row["mesh_id"], int(row["view_idx"]))
         grouped[key].append(float(row["error_px"]))
 
@@ -644,6 +677,36 @@ def aggregate_occlusion_stats(rows: list[dict[str, Any]]) -> list[dict[str, Any]
         })
     return out
 
+
+
+
+def aggregate_class_error_stats(error_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str, str], list[float]] = defaultdict(list)
+    for row in error_rows:
+        bucket = str(row.get("visibility_bucket", "visible"))
+        key = (str(row["match_mode"]), str(row["class_title"]), bucket)
+        grouped[key].append(float(row["error_px"]))
+        if bucket in {"visible", "occluded"}:
+            grouped[(str(row["match_mode"]), str(row["class_title"]), "visible_plus_occluded")].append(float(row["error_px"]))
+
+    out: list[dict[str, Any]] = []
+    for (match_mode, class_title, visibility_scope), errors in sorted(grouped.items()):
+        stats = finite_stats(errors)
+        out.append({
+            "match_mode": match_mode,
+            "class_title": class_title,
+            "visibility_scope": visibility_scope,
+            "num_detections": stats["count"],
+            "mean_error_px": stats["mean"],
+            "median_error_px": stats["median"],
+            "variance_error_px": stats["variance"],
+            "std_error_px": stats["std"],
+            "min_error_px": stats["min"],
+            "max_error_px": stats["max"],
+            "p25_error_px": stats["p25"],
+            "p75_error_px": stats["p75"],
+        })
+    return out
 
 def run_audit(args: argparse.Namespace) -> dict[str, Any]:
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -801,7 +864,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
                         continue
 
                     camera = cameras[view_idx]
-                    visible_gt = project_visible_gt(
+                    projected_gt = project_gt_with_visibility(
                         gt_points,
                         camera,
                         camera_centers[view_idx],
@@ -815,7 +878,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
                         args.zbuf_window_radius,
                         device,
                     )
-                    if visible_gt:
+                    if any(gt.visible for gt in projected_gt):
                         prompt_visible_views_with_prediction += 1
 
                     counts = evaluate_detection_matches(
@@ -826,7 +889,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
                         semantic_ids=semantic_ids,
                         view_idx=view_idx,
                         detections=detections,
-                        visible_gt=visible_gt,
+                        projected_gt=projected_gt,
                         res=args.res,
                         visibility_threshold_ratio=args.visibility_threshold_ratio,
                     )
@@ -865,6 +928,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
     class_top3_error_rows = aggregate_top3_views_by_error(mesh_view_rows)
     class_top3_freq_rows = aggregate_top3_best_view_frequency(mesh_best_rows)
     occlusion_rows = aggregate_occlusion_stats(prompt_view_rows)
+    class_error_rows = aggregate_class_error_stats(error_rows)
 
     write_csv(
         args.out_dir / "molmo2d_vs_visible_gt_rows.csv",
@@ -872,7 +936,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
         [
             "class_title", "mesh_id", "prompt", "semantic_ids", "view_idx", "detection_index",
             "match_mode", "matched_semantic_id", "molmo_px", "molmo_py", "gt_px", "gt_py", "gt_pz",
-            "error_px", "visibility_threshold_ratio",
+            "error_px", "visibility_bucket", "visibility_threshold_ratio",
         ],
     )
     write_csv(
@@ -937,6 +1001,15 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
             "occluded_gt_but_molmo_predicted", "no_gt_annotation_predictions", "occluded_prediction_rate",
         ],
     )
+    write_csv(
+        args.out_dir / "class_error_stats_by_visibility.csv",
+        class_error_rows,
+        [
+            "match_mode", "class_title", "visibility_scope", "num_detections",
+            "mean_error_px", "median_error_px", "variance_error_px", "std_error_px",
+            "min_error_px", "max_error_px", "p25_error_px", "p75_error_px",
+        ],
+    )
 
     summary = {
         "result_dir": str(args.result_dir),
@@ -957,6 +1030,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
         "num_mesh_best_rows": len(mesh_best_rows),
         "class_best_view_stats": class_best_rows,
         "class_occlusion_prediction_stats": occlusion_rows,
+        "class_error_stats_by_visibility": class_error_rows,
         "outputs": {
             "molmo2d_vs_visible_gt_rows": str(args.out_dir / "molmo2d_vs_visible_gt_rows.csv"),
             "prompt_visibility_occlusion_stats": str(args.out_dir / "prompt_visibility_occlusion_stats.csv"),
@@ -966,6 +1040,7 @@ def run_audit(args: argparse.Namespace) -> dict[str, Any]:
             "class_top3_views_by_error": str(args.out_dir / "class_top3_views_by_error.csv"),
             "class_top3_best_view_frequency": str(args.out_dir / "class_top3_best_view_frequency.csv"),
             "class_occlusion_prediction_stats": str(args.out_dir / "class_occlusion_prediction_stats.csv"),
+            "class_error_stats_by_visibility": str(args.out_dir / "class_error_stats_by_visibility.csv"),
         },
     }
     (args.out_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")

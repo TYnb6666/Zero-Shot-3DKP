@@ -20,6 +20,7 @@ from fast_hdbscan import HDBSCAN
 from zerokey.rendering import views_from_model, RenderO3D, get_depth_point_cloud, debug_enabled
 from zerokey.models import GPT4o, Molmo
 from zerokey._detection import KeypointDetectionMixin
+from zerokey.features.pointnext_surface import load_surface_features, surface_feature_path
 from zerokey.io.kpnet import KPNetIO
 from kp_utils import sample_view_points
 
@@ -98,7 +99,17 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
                  molmo_vit_feature_scale: float = 0.1,
                  molmo_vit_feature_file: str = 'molmo_vit_features.pt',
                  molmo_vit_feature_expname: str | None = None,
-                 molmo_2d_expname: str | None = None):
+                 molmo_2d_expname: str | None = None,
+                 use_pointnext_surface_features: bool = False,
+                 pointnext_surface_feature_dir: str | os.PathLike | None = None,
+                 pointnext_feature_dim: int = 16,
+                 pointnext_feature_scale: float = 0.1,
+                 pointnext_voxel_size: float = 0.01,
+                 pointnext_max_disk_diameter: float = 0.1,
+                 pointnext_max_disk_depth_range: float = 0.03,
+                 pointnext_max_disk_depth_ratio: float = 0.75,
+                 pointnext_min_disk_points: int = 50,
+                 pointnext_max_surface_dist: float | None = None):
         """Initialize the generator with output paths, rendering config, and viewpoints.
 
         Args:
@@ -113,6 +124,30 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
             molmo_vit_feature_file: Per-mesh feature-cache filename.
             molmo_vit_feature_expname: Optional source experiment for cached features.
             molmo_2d_expname: Optional source experiment for cached raw Molmo 2D detections.
+            use_pointnext_surface_features: If True, snap valid backprojected
+                candidates to saved PointNeXt surface anchors before clustering.
+            pointnext_surface_feature_dir: Root containing category/mesh_id.pt
+                PointNeXt surface-anchor artifacts.
+            pointnext_feature_dim: Random-projection output dimension for
+                PointNeXt features before HDBSCAN.
+            pointnext_feature_scale: Scale applied to standardized projected
+                PointNeXt features in the HDBSCAN space.
+            pointnext_voxel_size: Voxel size for downsampling snapped normal-view
+                candidates before HDBSCAN. Set <= 0 to disable.
+            pointnext_max_disk_diameter: Reject each view/color disk if its raw
+                valid 3D candidates have a robust diameter larger than this
+                value in ZeroKey coordinates. Set <= 0 to disable.
+            pointnext_max_disk_depth_range: Reject each view/color disk if its
+                robust depth range along the viewing direction is larger than
+                this value. This targets depth jumps and discontinuity edges.
+                Set <= 0 to disable.
+            pointnext_max_disk_depth_ratio: Reject each view/color disk if its
+                robust depth range divided by robust lateral diameter is larger
+                than this value. Set <= 0 to disable.
+            pointnext_min_disk_points: Minimum valid raw candidates required to
+                keep a view/color disk for PointNeXt snapping.
+            pointnext_max_surface_dist: Optional maximum distance from raw
+                candidate to nearest saved surface anchor after snapping.
         """
         self.log_dir = Path(log_dir)
         self.expname = expname
@@ -130,6 +165,16 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         self.molmo_vit_feature_file = molmo_vit_feature_file
         self.molmo_vit_feature_expname = molmo_vit_feature_expname
         self.molmo_2d_expname = molmo_2d_expname
+        self.use_pointnext_surface_features = use_pointnext_surface_features
+        self.pointnext_surface_feature_dir = Path(pointnext_surface_feature_dir) if pointnext_surface_feature_dir else None
+        self.pointnext_feature_dim = pointnext_feature_dim
+        self.pointnext_feature_scale = pointnext_feature_scale
+        self.pointnext_voxel_size = pointnext_voxel_size
+        self.pointnext_max_disk_diameter = pointnext_max_disk_diameter
+        self.pointnext_max_disk_depth_range = pointnext_max_disk_depth_range
+        self.pointnext_max_disk_depth_ratio = pointnext_max_disk_depth_ratio
+        self.pointnext_min_disk_points = pointnext_min_disk_points
+        self.pointnext_max_surface_dist = pointnext_max_surface_dist
         hires = (np.asarray(self.res) * self.scale).astype(np.int64)
         super(KPNetGenerator, self).__init__(self.device, res=hires.tolist())
 
@@ -286,6 +331,170 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         reduced = flat @ projection
         return reduced.reshape(*features.shape[:-1], self.molmo_vit_feature_dim)
 
+    def reduce_pointnext_features(self, features: torch.Tensor) -> torch.Tensor:
+        """Project PointNeXt surface features to a compact clustering dimension."""
+        if features.ndim != 2:
+            raise ValueError(f'Expected PointNeXt features [4096,D], got {tuple(features.shape)}')
+        features = features.to(device=self.device, dtype=torch.float32)
+        if features.shape[-1] == self.pointnext_feature_dim:
+            return features
+        projection = self._molmo_vit_projection(features.shape[-1], self.pointnext_feature_dim, self.device)
+        return features @ projection
+
+    def _normal_disk_mask(self, pts: torch.Tensor, features: torch.Tensor, directions: torch.Tensor | None = None) -> torch.Tensor:
+        """Keep only per-view disk backprojections without depth discontinuities.
+
+        Molmo detections are drawn as 2D disks.  A normal view backprojects to a
+        small nearly flat 3D patch; an abnormal view can span a depth
+        discontinuity and produce candidates on disconnected front/back
+        surfaces.  This filter operates independently for every drawn
+        ``(view_idx, class_id)`` disk before snapping to the fixed surface anchors.
+
+        The main rejection signal is depth spread along the local viewing
+        direction.  A 2D disk that crosses a silhouette, chair-seat/leg boundary,
+        or front/back surface edge has a much larger robust depth range than a
+        normal disk on one continuous surface.  The older 3D diameter check is
+        kept as a secondary guard against very large projected patches.
+        """
+        keep = torch.zeros(pts.shape[0], dtype=torch.bool, device=pts.device)
+        if pts.numel() == 0:
+            return keep
+        features_id = features[:, 0].long() * 256 + features[:, 1].long()
+        for feature_id in features_id.unique(sorted=True):
+            group_mask = features_id == feature_id
+            group_pts = pts[group_mask]
+            if group_pts.shape[0] < self.pointnext_min_disk_points:
+                continue
+            center = group_pts.median(dim=0).values
+            lateral_diameter = None
+            if directions is not None and (self.pointnext_max_disk_depth_range > 0 or self.pointnext_max_disk_depth_ratio > 0):
+                group_dirs = directions[group_mask].to(device=pts.device, dtype=torch.float32)
+                view_dir = group_dirs.mean(dim=0)
+                view_dir_norm = torch.linalg.norm(view_dir)
+                if view_dir_norm <= torch.finfo(torch.float32).eps:
+                    continue
+                view_dir = view_dir / view_dir_norm
+                signed_depth = group_pts @ view_dir
+                depth_q95 = torch.quantile(signed_depth, 0.95)
+                depth_q05 = torch.quantile(signed_depth, 0.05)
+                depth_range = depth_q95 - depth_q05
+                if self.pointnext_max_disk_depth_range > 0 and depth_range > self.pointnext_max_disk_depth_range:
+                    continue
+                centered = group_pts - center
+                depth_offsets = (centered @ view_dir)[:, None] * view_dir[None]
+                lateral_radius = torch.quantile(torch.linalg.norm(centered - depth_offsets, dim=1), 0.95)
+                lateral_diameter = 2.0 * lateral_radius
+                if self.pointnext_max_disk_depth_ratio > 0:
+                    ratio = depth_range / lateral_diameter.clamp_min(torch.finfo(torch.float32).eps)
+                    if ratio > self.pointnext_max_disk_depth_ratio:
+                        continue
+            if self.pointnext_max_disk_diameter > 0:
+                if lateral_diameter is None:
+                    robust_radius = torch.quantile(torch.linalg.norm(group_pts - center, dim=1), 0.95)
+                    robust_diameter = 2.0 * robust_radius
+                else:
+                    robust_diameter = lateral_diameter
+                if robust_diameter > self.pointnext_max_disk_diameter:
+                    continue
+            keep[group_mask] = True
+        return keep
+
+    def _voxel_downsample_candidates(
+        self,
+        pts: torch.Tensor,
+        features: torch.Tensor,
+        pointnext_feat: torch.Tensor,
+        surface_dist: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Voxel-downsample snapped candidates without mixing view/color IDs."""
+        if self.pointnext_voxel_size <= 0 or pts.shape[0] <= 1:
+            return pts, features, pointnext_feat, surface_dist
+
+        voxel = torch.floor(pts / self.pointnext_voxel_size).long()
+        features_id = features[:, 0].long() * 256 + features[:, 1].long()
+        keys = torch.cat([features_id[:, None], voxel], dim=1)
+        unique_keys, inverse = torch.unique(keys, dim=0, return_inverse=True)
+
+        out_pts: list[torch.Tensor] = []
+        out_features: list[torch.Tensor] = []
+        out_pointnext_feat: list[torch.Tensor] = []
+        out_surface_dist: list[torch.Tensor] = []
+        raw_weights = features[:, 2].float().clamp_min(torch.finfo(torch.float32).eps)
+        for idx in range(unique_keys.shape[0]):
+            mask = inverse == idx
+            weights = raw_weights[mask]
+            weight_sum = weights.sum()
+            weighted = weights[:, None]
+            out_pts.append((pts[mask] * weighted).sum(dim=0) / weight_sum)
+            out_pointnext_feat.append((pointnext_feat[mask] * weighted).sum(dim=0) / weight_sum)
+            out_surface_dist.append((surface_dist[mask] * weights).sum(dim=0, keepdim=True) / weight_sum)
+            feature_row = features[mask][weights.argmax()].float().clone()
+            feature_row[2] = weight_sum.to(dtype=feature_row.dtype)
+            feature_row[3] = 1
+            out_features.append(feature_row)
+
+        return (
+            torch.stack(out_pts, dim=0),
+            torch.stack(out_features, dim=0),
+            torch.stack(out_pointnext_feat, dim=0),
+            torch.cat(out_surface_dist, dim=0),
+        )
+
+    def snap_candidates_to_pointnext_surface(self, pts_3d: Pointclouds, surface_payload: dict[str, Any]) -> Pointclouds:
+        """Snap valid raw candidates to saved PointNeXt anchors and attach features.
+
+        The saved ``surface_xyz`` is the single source of truth for the 4096
+        anchors.  Raw off-surface backprojections are only used to choose the
+        nearest anchor; HDBSCAN then receives the snapped anchor coordinates plus
+        a deterministic random projection of the corresponding PointNeXt feature.
+        """
+        all_pts = pts_3d.points_packed()
+        all_features = pts_3d.features_packed()
+        all_directions = pts_3d.normals_packed()
+        if all_pts is None or all_features is None:
+            return pts_3d
+
+        valid_mask = all_features[:, 3].bool()
+        raw_pts = all_pts[valid_mask].to(device=self.device, dtype=torch.float32)
+        raw_features = all_features[valid_mask].to(device=self.device)
+        raw_directions = all_directions[valid_mask].to(device=self.device, dtype=torch.float32) if all_directions is not None else None
+        if raw_pts.shape[0] <= 1:
+            return Pointclouds(points=raw_pts[None], features=raw_features[None])
+
+        disk_mask = self._normal_disk_mask(raw_pts, raw_features, raw_directions)
+        raw_pts = raw_pts[disk_mask]
+        raw_features = raw_features[disk_mask]
+        if raw_pts.shape[0] <= 1:
+            return Pointclouds(points=raw_pts[None], features=raw_features[None])
+
+        surface_xyz = surface_payload['surface_xyz'].to(device=self.device, dtype=torch.float32)
+        surface_feat = surface_payload['surface_feat'].to(device=self.device, dtype=torch.float32)
+        reduced_surface_feat = self.reduce_pointnext_features(surface_feat)
+
+        dist = torch.cdist(raw_pts, surface_xyz)
+        surface_nn_idx = dist.argmin(dim=1)
+        surface_dist = dist[torch.arange(raw_pts.shape[0], device=raw_pts.device), surface_nn_idx]
+        if self.pointnext_max_surface_dist is not None:
+            surface_mask = surface_dist <= self.pointnext_max_surface_dist
+            raw_features = raw_features[surface_mask]
+            surface_nn_idx = surface_nn_idx[surface_mask]
+            surface_dist = surface_dist[surface_mask]
+            if surface_nn_idx.shape[0] <= 1:
+                snapped = surface_xyz[surface_nn_idx]
+                return Pointclouds(points=snapped[None], features=raw_features[None])
+
+        snapped_xyz = surface_xyz[surface_nn_idx]
+        candidate_feat = reduced_surface_feat[surface_nn_idx]
+        snapped_xyz, raw_features, candidate_feat, surface_dist = self._voxel_downsample_candidates(
+            snapped_xyz, raw_features, candidate_feat, surface_dist)
+
+        # Keep the original metadata channels first.  HDBSCAN consumes the
+        # feature tail as RandomProjection(PointNeXt feature); surface_dist is
+        # computed above for optional filtering and diagnostics, but is not part
+        # of the clustering space by default.
+        point_features = torch.cat([raw_features.float(), candidate_feat], dim=1)
+        return Pointclouds(points=snapped_xyz[None], features=point_features[None])
+
     def filter_draw_invalid_kps_with_images(self, images_with_kps: list[Image.Image], pts_3d: Pointclouds, kp: str, class_title: str, mesh_id: str) -> torch.Tensor:
         """Filter out invalid backprojections and annotate failed views with error text.
 
@@ -369,7 +578,8 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         if sampled_vit_features is not None and sampled_vit_features.numel() > 0:
             feat = sampled_vit_features
             feat = (feat - feat.mean(dim=0, keepdim=True)) / feat.std(dim=0, keepdim=True, unbiased=False).clamp_min(1e-6)
-            np_pts = np.concatenate([np_pts, (feat * self.molmo_vit_feature_scale).cpu().numpy()], axis=1)
+            feature_scale = self.pointnext_feature_scale if self.use_pointnext_surface_features else self.molmo_vit_feature_scale
+            np_pts = np.concatenate([np_pts, (feat * feature_scale).cpu().numpy()], axis=1)
 
         # Retry HDBSCAN with progressively smaller min_cluster_size until clusters are found
         min_cluster_size = 10
@@ -422,6 +632,19 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
         """
         self.kp_initialized_empty = True
         cache: dict[str, Any] = {}
+        if self.use_pointnext_surface_features:
+            if self.pointnext_surface_feature_dir is None:
+                print('[WARN] PointNeXt surface features requested without --pointnext-surface-feature-dir; clustering in raw xyz', file=sys.stderr)
+            else:
+                feature_path = surface_feature_path(self.pointnext_surface_feature_dir, class_title, mesh_id)
+                if feature_path.exists():
+                    try:
+                        cache['__pointnext_surface__'] = load_surface_features(feature_path)
+                    except ValueError as exc:
+                        print(f'[WARN] Invalid PointNeXt surface feature artifact, clustering in raw xyz: {exc}', file=sys.stderr)
+                else:
+                    print(f'[WARN] PointNeXt surface feature cache not found, clustering in raw xyz: {feature_path}', file=sys.stderr)
+
         if not self.use_molmo_vit_features:
             return cache
 
@@ -548,6 +771,8 @@ class KPNetGenerator(KeypointDetectionMixin, RenderO3D, Generic[_IO, _M]):
                     self.io.save_kps(mesh, kps_3d_raw, class_title, mesh_id,
                                      semantic_id=','.join(map(str, semantic_ids)),
                                      postfix=kp_prompt, prefix='RawPts')
+                if self.use_pointnext_surface_features and '__pointnext_surface__' in last_kp_cache:
+                    kps_3d = self.snap_candidates_to_pointnext_surface(kps_3d, last_kp_cache['__pointnext_surface__'])
                 # Cluster raw 3D points into consolidated keypoints
                 kps_3d = self.aggregate_kps(mesh, kps_3d, kp_prompt=kp_prompt, last_kp_cache=last_kp_cache)
                 if self.vis:

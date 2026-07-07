@@ -162,7 +162,7 @@ hydra-core = ">=1.3.2, <2"
 omegaconf = ">=2.3.0, <3"
 
 # Build from forks with torch in build-system.requires (solves chicken-and-egg problem)
-pytorch3d = { git = "https://github.com/gt4o4/pytorch3d.git" }
+pytorch3d = { git = "https://github.com/gt4o4/pytorch3d.git", rev = "95bb092766c5fd5e476e58622148fb3e06104b06" }
 KNN-CUDA = { git = "https://github.com/gt4o4/KNN_CUDA.git" }
 pointnet2-ops = { git = "https://github.com/gt4o4/Pointnet2_PyTorch.git", subdirectory = "pointnet2_ops_lib" }
 mmcv = { git = "https://github.com/gt4o4/mmcv.git" }

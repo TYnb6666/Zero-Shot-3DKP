@@ -23,7 +23,7 @@ REQUIRED_KEYS = {
 def load_surface_features(pt_path: str | Path) -> dict[str, Any]:
     """Load a PointNeXt surface feature artifact on CPU and validate it."""
     path = Path(pt_path)
-    data = torch.load(path, map_location="cpu")
+    data = torch.load(path, map_location="cpu", weights_only=False)
     validate_surface_features(data, source=path)
     return data
 
